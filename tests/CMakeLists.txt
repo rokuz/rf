@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 project(rf_tests)
 
 set(CMAKE_MACOSX_RPATH OFF)
+set(BUILD_SHARED_LIBS OFF)
+set(gtest_force_shared_crt ON)
 
 enable_testing()
 

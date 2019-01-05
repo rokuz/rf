@@ -5,6 +5,8 @@ project(rf)
 OPTION(RF_AABB_BUILD_TESTS "If the test suite is built in addition to the framework." ON)
 
 set(CMAKE_MACOSX_RPATH OFF)
+set(BUILD_SHARED_LIBS OFF)
+set(gtest_force_shared_crt ON)
 set(CMAKE_CXX_STANDARD 17)
 
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")

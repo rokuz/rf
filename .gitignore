@@ -25,3 +25,7 @@ DerivedData/*
 
 # CMake
 cmake-build-*
+
+# VS
+.vs
+CMakeSettings.json

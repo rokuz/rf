@@ -1,7 +1,6 @@
 #include "logger.hpp"
 
-#include <fstream>
-#include <iostream>
+#include "rf.hpp"
 
 namespace rf
 {
@@ -15,6 +14,9 @@ void Logger::ToLog(std::string const & message)
   if ((outputFlags & static_cast<unsigned char>(OutputFlags::CONSOLE)) != 0)
   {
     std::cout << message;
+#ifdef WINDOWS_PLATFORM
+    OutputDebugStringA(message.c_str());
+#endif
   }
   if ((outputFlags & static_cast<unsigned char>(OutputFlags::FILE)) != 0)
   {
@@ -69,4 +71,4 @@ void Logger::Flush()
   if (g_logFile.is_open())
     g_logFile.flush();
 }
-}  // namespace common
+}  // namespace rf

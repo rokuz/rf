@@ -21,7 +21,8 @@
 #include <vector>
 
 #if defined(WIN32) || defined(__WIN32__) || defined(_WIN32) || defined(_MSC_VER)
-#include "gl3w.hpp"
+#define WINDOWS_PLATFORM
+#include "gl3w.h"
 #undef min
 #undef max
 #else
