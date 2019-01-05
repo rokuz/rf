@@ -19,10 +19,6 @@ include_directories(../3party/glm)
 include_directories(../3party/glm-aabb)
 include_directories(../3party/stb)
 
-if (APPLE)
-  add_definitions(-DGLFW_INCLUDE_GLCOREARB)
-endif()
-
 find_package(OpenGL REQUIRED)
 
 if (UNIX)
@@ -35,7 +31,7 @@ set(SOURCE_ROOT .)
 aux_source_directory(${SOURCE_ROOT} TESTS_SRC_LIST)
 
 add_executable(${PROJECT_NAME} ${TESTS_SRC_LIST})
-target_link_libraries(${PROJECT_NAME} rf ${OPENGL_LIBRARY} gtest ${PTHREADS})
+target_link_libraries(${PROJECT_NAME} rf ${OPENGL_LIBRARY} glfw gtest ${PTHREADS})
 if (WIN32)
   target_link_libraries(${PROJECT_NAME} gl3w)
 endif()

@@ -4,6 +4,10 @@ project(rf)
 
 OPTION(RF_AABB_BUILD_TESTS "If the test suite is built in addition to the framework." ON)
 
+if (APPLE)
+  add_definitions(-Wno-deprecated)
+endif()
+
 set(CMAKE_MACOSX_RPATH OFF)
 set(BUILD_SHARED_LIBS OFF)
 set(gtest_force_shared_crt ON)
@@ -17,9 +21,6 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "")
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "")
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "")
 set(GLFW_INSTALL OFF CACHE BOOL "")
-if (APPLE)
-  add_definitions(-DGLFW_INCLUDE_GLCOREARB)
-endif()
 add_subdirectory(3party/glfw)
 
 set(GLM_STATIC_LIBRARY_ENABLE OFF CACHE BOOL "")
