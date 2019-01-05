@@ -35,6 +35,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "logger.hpp"
+
 namespace rf
 {
 class Utils

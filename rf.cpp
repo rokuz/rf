@@ -159,8 +159,8 @@ bool Utils::CheckForOpenGLError(const char * file, const char * function, int li
         error = "Unknown";
     }
 
-    //common::Logger::toLogWithFormat("OpenGL error: %s (%s > %s, line: %d).\n", error.c_str(), file,
-    //                                function, line);
+    Logger::ToLogWithFormat("OpenGL error: %s (%s > %s, line: %d).\n",
+                            error.c_str(), file, function, line);
     err = glGetError();
   }
 

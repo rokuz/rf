@@ -29,6 +29,10 @@ add_subdirectory(3party/glm-aabb)
 
 find_package(OpenGL REQUIRED)
 
+if (WIN32)
+  add_subdirectory(3party/gl3w)
+endif()
+
 include_directories(.)
 include_directories(3party/assimp/include)
 include_directories(3party/cxxopts/include)

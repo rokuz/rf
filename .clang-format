@@ -1,0 +1,28 @@
+# Configuration file for clang-format, based on docs/cpp_coding_standard.txt.
+
+---
+BasedOnStyle: Google
+IndentWidth: 2
+
+---
+Language: Cpp
+AccessModifierOffset: -2
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+UseTab: Never
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BreakBeforeBraces: Allman
+BreakConstructorInitializersBeforeComma: false
+ColumnLimit: 100
+DerivePointerAlignment: false
+NamespaceIndentation: None
+PointerAlignment: Middle
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+Cpp11BracedListStyle: true
+IndentCaseLabels: true
+Standard: Cpp11
+KeepEmptyLinesAtTheStartOfBlocks: true
+AlignTrailingComments: false
+ConstructorInitializerIndentWidth: 2
+MaxEmptyLinesToKeep: 2
