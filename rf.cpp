@@ -48,13 +48,14 @@ std::string Utils::GetExtension(std::string const & fileName)
   return ext;
 }
 
-std::list<std::string> Utils::GetExtensions(std::string const & fileName)
+std::vector<std::string> Utils::GetExtensions(std::string const & fileName)
 {
-  std::list<std::string> result;
+  std::vector<std::string> result;
   auto const tokens = Tokenize<std::string>(fileName, '.');
   if (tokens.empty())
     return result;
 
+  result.reserve(tokens.size());
   auto it = tokens.begin();
   it++;
   for (; it != tokens.end(); ++it)

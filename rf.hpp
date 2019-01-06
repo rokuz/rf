@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "gpu_program.hpp"
 #include "logger.hpp"
 #include "window.hpp"
 
@@ -13,17 +14,17 @@ public:
   static bool IsPathExisted(std::string const & fileName);
   static bool ReadFileToString(std::string const & fileName, std::string & out);
   static std::string GetExtension(std::string const & fileName);
-  static std::list<std::string> GetExtensions(std::string const & fileName);
+  static std::vector<std::string> GetExtensions(std::string const & fileName);
   static std::string TrimExtension(std::string const & fileName);
   static std::string GetPath(std::string const & path);
   static std::string GetFilename(std::string const & path);
   static std::string CurrentTimeDate(bool withoutSpaces = false);
 
   template <typename StringType>
-  static std::list<std::pair<size_t, size_t>> Tokenize(StringType const & str,
-                                                       typename StringType::value_type delimiter)
+  static std::vector<std::pair<size_t, size_t>> Tokenize(StringType const & str,
+                                                         typename StringType::value_type delimiter)
   {
-    std::list<std::pair<size_t, size_t>> result;
+    std::vector<std::pair<size_t, size_t>> result;
     if (str.empty())
       return result;
 

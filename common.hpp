@@ -11,6 +11,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <initializer_list>
 #include <list>
 #include <locale>
 #include <map>
@@ -40,3 +41,5 @@
 #define GLFW_INCLUDE_GLCOREARB
 #endif
 #include <GLFW/glfw3.h>
+
+#define ENABLE_SHADERS_VALIDATION 1
