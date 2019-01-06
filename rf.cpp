@@ -103,6 +103,11 @@ std::string Utils::GetFilename(std::string const & path)
   return p.substr(it->first, it->second - it->first + 1);
 }
 
+void Utils::RemoveFile(std::string const & path)
+{
+  remove(path.c_str());
+}
+
 std::string Utils::TrimExtension(std::string const & fileName)
 {
   size_t dot_sign = fileName.find_last_of('.');

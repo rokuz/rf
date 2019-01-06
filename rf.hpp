@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "gpu_program.hpp"
 #include "logger.hpp"
+#include "texture.hpp"
 #include "window.hpp"
 
 namespace rf
@@ -18,6 +19,7 @@ public:
   static std::string TrimExtension(std::string const & fileName);
   static std::string GetPath(std::string const & path);
   static std::string GetFilename(std::string const & path);
+  static void RemoveFile(std::string const & path);
   static std::string CurrentTimeDate(bool withoutSpaces = false);
 
   template <typename StringType>
@@ -48,4 +50,4 @@ public:
 };
 }  // namespace rf
 
-#define glCheckError() common::Utils::CheckForOpenGLError(__FILE__, __FUNCTION__, __LINE__)
+#define glCheckError() rf::Utils::CheckForOpenGLError(__FILE__, __FUNCTION__, __LINE__)
