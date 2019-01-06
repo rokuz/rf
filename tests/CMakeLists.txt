@@ -31,7 +31,7 @@ set(SOURCE_ROOT .)
 aux_source_directory(${SOURCE_ROOT} TESTS_SRC_LIST)
 
 add_executable(${PROJECT_NAME} ${TESTS_SRC_LIST})
-target_link_libraries(${PROJECT_NAME} rf ${OPENGL_LIBRARY} glfw gtest ${PTHREADS})
+target_link_libraries(${PROJECT_NAME} rf ${OPENGL_LIBRARY} assimp glfw gtest ${PTHREADS})
 if (WIN32)
   target_link_libraries(${PROJECT_NAME} gl3w)
 endif()

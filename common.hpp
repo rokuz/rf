@@ -7,6 +7,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <functional>
@@ -33,7 +34,10 @@
 #include <OpenGl/gl3ext.h>
 #endif
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
+#include <glm/gtx/compatibility.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "glm-aabb/AABB.hpp"
 
@@ -41,5 +45,7 @@
 #define GLFW_INCLUDE_GLCOREARB
 #endif
 #include <GLFW/glfw3.h>
+
+float constexpr kPi = static_cast<float>(3.14159265358979323846);
 
 #define ENABLE_SHADERS_VALIDATION 1

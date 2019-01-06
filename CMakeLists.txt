@@ -37,6 +37,7 @@ if (WIN32)
 endif()
 
 include_directories(.)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/3party/assimp/include)
 include_directories(3party/assimp/include)
 include_directories(3party/cxxopts/include)
 include_directories(3party/glfw/include)

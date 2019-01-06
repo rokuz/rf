@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "gpu_program.hpp"
 #include "logger.hpp"
+#include "mesh.hpp"
 #include "texture.hpp"
 #include "window.hpp"
 
