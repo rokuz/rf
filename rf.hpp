@@ -1,6 +1,8 @@
 #pragma once
 
+#include "camera.hpp"
 #include "common.hpp"
+#include "free_camera.hpp"
 #include "gpu_program.hpp"
 #include "logger.hpp"
 #include "mesh.hpp"

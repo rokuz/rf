@@ -476,8 +476,8 @@ TResult InterpolateKeys(double animTime, TKeys const & keys, TResult const & def
 glm::mat4x4 CalculateBoneAnimation(BoneAnimation const & boneAnim, double animTime)
 {
   glm::vec3 pos = InterpolateKeys(animTime, boneAnim.m_translationKeys, glm::vec3());
-  glm::quat rot = InterpolateKeys(animTime, boneAnim.m_rotationKeys, glm::quat());
-  glm::vec3 sc = InterpolateKeys(animTime, boneAnim.m_scaleKeys, glm::vec3(1, 1, 1));
+  glm::quat rot = InterpolateKeys(animTime, boneAnim.m_rotationKeys, glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+  glm::vec3 sc = InterpolateKeys(animTime, boneAnim.m_scaleKeys, glm::vec3(1.0f, 1.0f, 1.0f));
 
   return glm::scale(glm::translate(glm::mat4x4(rot), pos), sc);
 }
