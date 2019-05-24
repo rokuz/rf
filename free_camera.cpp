@@ -74,7 +74,6 @@ void FreeCamera::Update(double elapsedTime, uint32_t screenWidth,
   if (m_rotationMode)
   {
     float constexpr kPeriod = 1.0f / 60.0f;
-    float constexpr kEps = 1e-5;
     m_updateTime += elapsedTime;
     if (m_updateTime >= kPeriod)
     {

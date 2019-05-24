@@ -61,7 +61,7 @@ bool Window::Initialize(uint32_t screenWidth, uint32_t screenHeight)
 {
   glfwSetErrorCallback([](int error, char const * description)
   {
-    Logger::ToLogWithFormat("GLFW error (%d): %s", error, description);
+    Logger::ToLogWithFormat(Logger::Error, "GLFW: (%d): %s", error, description);
   });
 
   if (!glfwInit())

@@ -48,5 +48,15 @@
 #include <GLFW/glfw3.h>
 
 float constexpr kPi = static_cast<float>(3.14159265358979323846);
+float constexpr kEps = 1e-5f;
+
+using ByteArray = std::vector<uint8_t>;
 
 #define ENABLE_SHADERS_VALIDATION 1
+
+#ifdef DEBUG
+#define ASSERT()
+#else
+#define ASSERT(condition, s) assert((condition) && s)
+#endif
+#define CHECK(condition, s) if ((condition) && s) std::abort()

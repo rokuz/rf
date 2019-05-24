@@ -194,7 +194,7 @@ void InitPlane(float width, float height, uint32_t widthSegments, uint32_t heigh
 }
 
 template <typename T>
-void CopyToVertexBuffer(TVertexBuffer & vb, std::vector<T> const & v)
+void CopyToVertexBuffer(ByteArray & vb, std::vector<T> const & v)
 {
   size_t const sz = v.size() * sizeof(T);
   vb.resize(sz);
@@ -207,13 +207,13 @@ bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
 {
   if (componentsMask == 0)
   {
-    Logger::ToLog("Error: Can't generate sphere, components mask is invalid.\n");
+    Logger::ToLog(Logger::Error, "Can't generate sphere, components mask is invalid.");
     return false;
   }
 
   if (radius <= 0)
   {
-    Logger::ToLog("Error: Can't generate sphere, radius must be more than 0.\n");
+    Logger::ToLog(Logger::Error, "Can't generate sphere, radius must be more than 0.");
     return false;
   }
 
@@ -253,9 +253,9 @@ bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
           for (size_t i = 0; i < tangents.size(); i++)
           {
             glm::vec3 n = glm::normalize(positions[i]);
-            if (fabs(n.y + 1.0) < 1e-5)
+            if (fabs(n.y + 1.0) < kEps)
               tangents[i] = glm::vec3(-1, 0, 0);
-            else if (fabs(n.y - 1.0) < 1e-5)
+            else if (fabs(n.y - 1.0) < kEps)
               tangents[i] = glm::vec3(1, 0, 0);
             else
               tangents[i] = glm::vec3(0, 1, 0) * n;
@@ -269,8 +269,8 @@ bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
         else
         {
           failed = true;
-          Logger::ToLog(
-              "Error: Can't generate sphere, components mask contains unsupported attributes.\n");
+          Logger::ToLog(Logger::Error,
+            "Can't generate sphere, components mask contains unsupported attributes.");
           return false;
         }
 
@@ -294,14 +294,14 @@ bool MeshGenerator::GeneratePlane(float width, float height, uint32_t components
 {
   if (componentsMask == 0)
   {
-    Logger::ToLog("Error: Can't generate plane, components mask is invalid.\n");
+    Logger::ToLog(Logger::Error, "Can't generate plane, components mask is invalid.");
     return false;
   }
 
   if (width <= 0 || height <= 0 || widthSegments <= 0 || heightSegments <= 0 || uSegments <= 0 ||
       vSegments <= 0)
   {
-    Logger::ToLog("Error: Can't generate plane, plane parameters are invalid.\n");
+    Logger::ToLog(Logger::Error, "Can't generate plane, plane parameters are invalid.");
     return false;
   }
 
@@ -317,23 +317,23 @@ bool MeshGenerator::GeneratePlane(float width, float height, uint32_t components
       [&meshGroup, &failed, &positions, &indices, &uv](MeshVertexAttribute attr) {
         if (attr == MeshVertexAttribute::Position)
         {
-          for (size_t i = 0; i < positions.size(); i++)
-            meshGroup.m_boundingBox.extend(positions[i]);
+          for (auto const & p : positions)
+            meshGroup.m_boundingBox.extend(p);
 
           CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], positions);
         }
         else if (attr == MeshVertexAttribute::Normal)
         {
           std::vector<glm::vec3> normals(positions.size());
-          for (size_t i = 0; i < normals.size(); i++)
-            normals[i] = glm::vec3(0, 1, 0);
+          for (auto & n : normals)
+            n = glm::vec3(0, 1, 0);
           CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], normals);
         }
         else if (attr == MeshVertexAttribute::Tangent)
         {
           std::vector<glm::vec3> tangents(positions.size());
-          for (size_t i = 0; i < tangents.size(); i++)
-            tangents[i] = glm::vec3(1, 0, 0);
+          for (auto & t : tangents)
+            t = glm::vec3(1, 0, 0);
           CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], tangents);
         }
         else if (attr == MeshVertexAttribute::UV0)
@@ -343,8 +343,8 @@ bool MeshGenerator::GeneratePlane(float width, float height, uint32_t components
         else
         {
           failed = true;
-          Logger::ToLog(
-              "Error: Can't generate sphere, components mask contains unsupported attributes.\n");
+          Logger::ToLog(Logger::Error,
+            "Can't generate sphere, components mask contains unsupported attributes.");
           return false;
         }
 

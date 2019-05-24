@@ -35,8 +35,9 @@ GLenum GetOGLShaderType(ShaderType type)
       return GL_FRAGMENT_SHADER;
 
     case ShaderType::Count:
-      assert(false && "Invalid shader type.");
+      ASSERT(false, "Invalid shader type.");
   }
+  CHECK(false, "Unknown shader type");
   return -1;
 }
 }  // namespace
@@ -56,9 +57,8 @@ bool GpuProgram::SetShaderFromFile(std::string const & fileName)
   auto const shaderType = GetTypeByExt(Utils::GetExtensions(fileName));
   if (shaderType == ShaderType::Count)
   {
-    Logger::ToLogWithFormat(
-        "Error: Could not add shader '%s'. Shader type is undefined.\n",
-        fileName.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "Could not add shader '%s'. Shader type is undefined.",
+                            fileName.c_str());
     return false;
   }
 
@@ -66,7 +66,7 @@ bool GpuProgram::SetShaderFromFile(std::string const & fileName)
   Utils::ReadFileToString(fileName, sourceStr);
   if (sourceStr.empty())
   {
-    Logger::ToLogWithFormat("Error: Failed to load shader '%s'.\n", fileName.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "Failed to load shader '%s'.", fileName.c_str());
     return false;
   }
 
@@ -78,7 +78,8 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
 {
   if (!areFiles && shaders.size() != static_cast<size_t>(ShaderType::Count))
   {
-    Logger::ToLog("Error: Initialization as sources requires passing sources for all shader types.\n");
+    Logger::ToLog(Logger::Error,
+                  "Initialization as sources requires passing sources for all shader types.");
     return false;
   }
 
@@ -113,7 +114,7 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
     if (!CompileShader(static_cast<ShaderType>(shaderIndex), &shader))
     {
       Destroy();
-      Logger::ToLogWithFormat("Error: Failed to compile shader '%s'.\n",
+      Logger::ToLogWithFormat(Logger::Error, "Failed to compile shader '%s'.",
                               m_shaders[shaderIndex].c_str());
       return false;
     }
@@ -125,14 +126,14 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
 
   if (compiledShaders.empty())
   {
-    Logger::ToLog("Error: No valid shaders are found.\n");
+    Logger::ToLog(Logger::Error, "No valid shaders are found.");
     Destroy();
     return false;
   }
 
   if (!LinkProgram(m_program))
   {
-    Logger::ToLog("Error: Failed to link program.\n");
+    Logger::ToLog(Logger::Error, "Failed to link program.");
 
     for (auto const s : compiledShaders)
       glDeleteShader(s);
@@ -184,7 +185,7 @@ bool GpuProgram::CompileShader(ShaderType type, GLuint * shader)
   {
     std::vector<GLchar> log(logLength);
     glGetShaderInfoLog(*shader, logLength, &logLength, log.data());
-    Logger::ToLogWithFormat("Shader compilation log:\n%s", log.data());
+    Logger::ToLogWithFormat(Logger::Info, "Shader compilation log:\n  %s", log.data());
   }
 #endif
 
@@ -210,7 +211,7 @@ bool GpuProgram::LinkProgram(GLuint prog)
   {
     std::vector<GLchar> log(logLength);
     glGetProgramInfoLog(prog, logLength, &logLength, log.data());
-    Logger::ToLogWithFormat("Gpu program linkage log:\n%s", log.data());
+    Logger::ToLogWithFormat(Logger::Info, "Gpu program linkage log:\n  %s", log.data());
   }
 #endif
 
@@ -229,7 +230,7 @@ void GpuProgram::ValidateProgram(GLuint prog)
     std::vector<GLchar> log(logLength);
     glGetProgramInfoLog(prog, logLength, &logLength, log.data());
     if (strcmp(log.data(), "Validation successful.\n") != 0)
-      Logger::ToLogWithFormat("Gpu program validation log:\n%s", log.data());
+      Logger::ToLogWithFormat(Logger::Warning, "Gpu program validation log:\n  %s", log.data());
   }
 }
 
@@ -253,7 +254,7 @@ bool GpuProgram::BindUniform(std::string const & uniform)
     m_uniforms[uniform] = glGetUniformBlockIndex(m_program, uniform.c_str());
     if (m_uniforms[uniform] < 0)
     {
-      Logger::ToLogWithFormat("Error: Uniform '%s' has not been found to bind.\n",
+      Logger::ToLogWithFormat(Logger::Error, "Uniform '%s' has not been found to bind.",
                               uniform.c_str());
       return false;
     }

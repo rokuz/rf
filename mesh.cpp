@@ -76,21 +76,20 @@ uint32_t GetAttributeElements(MeshVertexAttribute attr)
     case BoneIndices:
     case BoneWeights:
       return 4;
-    default:
-      assert(false && "Unknown attribute");
   }
+  CHECK(false, "Unknown vertex attribute.");
   return 0;
 }
 
 class MeshLogStream : public Assimp::LogStream
 {
 public:
-  MeshLogStream(std::string const & filename) : m_filename(filename)
+  explicit MeshLogStream(std::string const & filename) : m_filename(filename)
   {}
 
   void write(char const * message) override
   {
-    Logger::ToLogWithFormat("Assimp message (%s): %s\n", m_filename.c_str(), message);
+    Logger::ToLogWithFormat(Logger::Error, "Assimp: (%s): %s", m_filename.c_str(), message);
   }
 
 private:
@@ -100,7 +99,7 @@ private:
 class MeshLogGuard
 {
 public:
-  MeshLogGuard(std::string const & filename)
+  explicit MeshLogGuard(std::string const & filename)
   {
     using namespace Assimp;
     m_stream = std::make_unique<MeshLogStream>(filename);
@@ -119,7 +118,7 @@ private:
   std::unique_ptr<MeshLogStream> m_stream;
 };
 
-TMaterialColor MakeColor(aiColor3D const & color)
+MaterialColor MakeColor(aiColor3D const & color)
 {
   return glm::vec3(color.r, color.g, color.b);
 }
@@ -160,11 +159,11 @@ void CopyVertexBufferPartially(Mesh::MeshGroup & group, MeshVertexAttribute attr
                                TData const * data, uint32_t numVertices)
 {
   uint32_t const attrSize = GetAttributeSize(attr);
-  assert((attrSize <= sizeof(TData)) && "Invalid data size");
+  ASSERT(attrSize <= sizeof(TData), "Invalid data size");
 
   size_t const sizeInBytes = numVertices * attrSize;
   group.m_vertexBuffers[attr].resize(sizeInBytes);
-  TVertexBuffer & buffer = group.m_vertexBuffers[attr];
+  ByteArray & buffer = group.m_vertexBuffers[attr];
   uint32_t offset = 0;
   for (uint32_t i = 0; i < numVertices; i++)
   {
@@ -175,7 +174,7 @@ void CopyVertexBufferPartially(Mesh::MeshGroup & group, MeshVertexAttribute attr
 
 void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
               aiNode const * node, uint32_t & componentsMask, uint32_t & verticesCount,
-              uint32_t & indicesCount, int & groupIndex, TBoneIndices & bonesIndices)
+              uint32_t & indicesCount, int & groupIndex, BoneIndicesCollection & bonesIndices)
 {
   meshNode->m_name = std::string(node->mName.C_Str());
   meshNode->m_transform = GetMatrix44(node->mTransformation);
@@ -218,10 +217,10 @@ void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
         // create new bone index
         if (bonesIndices.find(boneName) == bonesIndices.end())
         {
-          uint32_t newBoneIndex = (uint32_t)bonesIndices.size();
+          auto const newBoneIndex = static_cast<uint32_t>(bonesIndices.size());
           if (newBoneIndex >= kMaxBonesNumber)
           {
-            Logger::ToLogWithFormat("Warning: maximum number of bones (%d) is exceeded.\n",
+            Logger::ToLogWithFormat(Logger::Warning, "Maximum number of bones (%d) is exceeded.",
                                     kMaxBonesNumber);
             continue;
           }
@@ -233,15 +232,15 @@ void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
         for (uint32_t weightIndex = 0; weightIndex < bone->mNumWeights; weightIndex++)
         {
           uint32_t vertexId = bone->mWeights[weightIndex].mVertexId;
-          assert(vertexId < numVertices);
+          ASSERT(vertexId < numVertices, "");
 
           uint8_t b = bonesUsage[vertexId];
           if (b >= kMaxBonesPerVertex)
           {
             b = kMaxBonesPerVertex - 1;
-            Logger::ToLogWithFormat(
-                "Warning: maximum number of bones per vertex (%d) is exceeded.\n",
-                kMaxBonesPerVertex);
+            Logger::ToLogWithFormat(Logger::Warning,
+              "Maximum number of bones per vertex (%d) is exceeded.\n",
+              kMaxBonesPerVertex);
           }
           bonesUsage[vertexId]++;
 
@@ -257,8 +256,8 @@ void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
       }
     }
 
-    for (auto it = group.m_vertexBuffers.begin(); it != group.m_vertexBuffers.end(); ++it)
-      componentsMask |= it->first;
+    for (auto const & p : group.m_vertexBuffers)
+      componentsMask |= p.first;
 
 
     for (uint32_t i = 0; i < numVertices; i++)
@@ -355,7 +354,7 @@ void FillGPUBuffers(std::unique_ptr<Mesh::MeshNode> & meshNode, uint8_t * vbPtr,
             {
               uint32_t const attrSize = GetAttributeSize(attr);
               uint32_t const offset = GetAttributeOffset(componentsMask, attr);
-              TVertexBuffer & vb = group.m_vertexBuffers[attr];
+              ByteArray & vb = group.m_vertexBuffers[attr];
               for (uint32_t j = 0; j < group.m_verticesCount; j++)
                 memcpy(ptr + j * vertexSize + offset, vb.data() + j * attrSize, attrSize);
             }
@@ -482,7 +481,7 @@ glm::mat4x4 CalculateBoneAnimation(BoneAnimation const & boneAnim, double animTi
   return glm::scale(glm::translate(glm::mat4x4(rot), pos), sc);
 }
 
-bool FindBonesInHierarchy(std::unique_ptr<Mesh::MeshNode> & node, TBoneIndices const & bonesIndices)
+bool FindBonesInHierarchy(std::unique_ptr<Mesh::MeshNode> & node, BoneIndicesCollection const & bonesIndices)
 {
   if (bonesIndices.find(node->m_name) != bonesIndices.end())
     return true;
@@ -727,7 +726,7 @@ bool Mesh::LoadMesh(std::string const & filename)
   aiScene const * scene = importer.ReadFile(filename, postProcessFlags);
   if (scene == nullptr)
   {
-    Logger::ToLogWithFormat("Error: Could not load mesh from '%s'.\n", filename.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "Could not load mesh from '%s'.", filename.c_str());
     return false;
   }
 
@@ -761,17 +760,17 @@ bool Mesh::LoadMesh(std::string const & filename)
   }
 
   // load mesh nodes
-  m_rootNode.reset(new MeshNode());
+  m_rootNode = std::make_unique<MeshNode>();
   LoadNode(m_rootNode, scene, scene->mRootNode, m_componentsMask, m_verticesCount, m_indicesCount,
            m_groupsCount, m_bonesIndices);
   if (m_groupsCount <= 0)
   {
-    Logger::ToLogWithFormat("Error: No meshes in '%s'.\n", filename.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "No meshes in '%s'.", filename.c_str());
     return false;
   }
   if (m_componentsMask == 0)
   {
-    Logger::ToLogWithFormat("Error: Vertices format of mesh '%s' is invalid.\n",
+    Logger::ToLogWithFormat(Logger::Error, "Vertices format of mesh '%s' is invalid.",
                             filename.c_str());
     return false;
   }
@@ -808,23 +807,23 @@ bool Mesh::LoadMesh(std::string const & filename)
       }
       else
       {
-        Logger::ToLogWithFormat("Error: Bone '%s' is not found in mesh '%s'.\n",
+        Logger::ToLogWithFormat(Logger::Error, "Bone '%s' is not found in mesh '%s'.",
                                 animNode->mNodeName.C_Str(), filename.c_str());
         failed = true;
         break;
       }
 
       for (uint32_t i = 0; i < animNode->mNumPositionKeys; i++)
-        boneAnim.m_translationKeys.push_back(std::make_pair(
-            animNode->mPositionKeys[i].mTime, GetVector3(animNode->mPositionKeys[i].mValue)));
+        boneAnim.m_translationKeys.emplace_back(animNode->mPositionKeys[i].mTime,
+                                                GetVector3(animNode->mPositionKeys[i].mValue));
 
       for (uint32_t i = 0; i < animNode->mNumRotationKeys; i++)
-        boneAnim.m_rotationKeys.push_back(std::make_pair(
-            animNode->mRotationKeys[i].mTime, GetQuaternion(animNode->mRotationKeys[i].mValue)));
+        boneAnim.m_rotationKeys.emplace_back(animNode->mRotationKeys[i].mTime,
+                                             GetQuaternion(animNode->mRotationKeys[i].mValue));
 
       for (uint32_t i = 0; i < animNode->mNumScalingKeys; i++)
-        boneAnim.m_scaleKeys.push_back(std::make_pair(
-            animNode->mScalingKeys[i].mTime, GetVector3(animNode->mScalingKeys[i].mValue)));
+        boneAnim.m_scaleKeys.emplace_back(animNode->mScalingKeys[i].mTime,
+                                          GetVector3(animNode->mScalingKeys[i].mValue));
 
       anim->m_boneAnimations.push_back(std::move(boneAnim));
     }

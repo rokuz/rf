@@ -4,17 +4,17 @@
 
 namespace rf
 {
-using TMaterialColor = std::optional<glm::vec3>;
-TMaterialColor const kInvalidColor = TMaterialColor();
+using MaterialColor = std::optional<glm::vec3>;
+MaterialColor const kInvalidColor = MaterialColor();
 
 struct MeshMaterial
 {
   std::string diffuseTexture;
   std::string normalsTexture;
   std::string specularTexture;
-  TMaterialColor diffuseColor = kInvalidColor;
-  TMaterialColor specularColor = kInvalidColor;
-  TMaterialColor ambientColor = kInvalidColor;
+  MaterialColor diffuseColor = kInvalidColor;
+  MaterialColor specularColor = kInvalidColor;
+  MaterialColor ambientColor = kInvalidColor;
 
   bool isValid() const
   {
@@ -23,7 +23,7 @@ struct MeshMaterial
   }
 };
 
-using TMaterialCollection = std::unordered_map<uint32_t, std::shared_ptr<MeshMaterial>>;
+using MaterialCollection = std::unordered_map<uint32_t, std::shared_ptr<MeshMaterial>>;
 
 enum MeshVertexAttribute
 {
@@ -50,14 +50,13 @@ uint32_t constexpr kAttributesCount = sizeof(kAllAttributes) / sizeof(kAllAttrib
 uint32_t constexpr kMaxBonesNumber = 64;
 uint32_t constexpr kMaxBonesPerVertex = 4;
 
-using TVertexBuffer = std::vector<uint8_t>;
-using TIndexBuffer = std::vector<uint32_t>;
-using TVertexBufferCollection = std::unordered_map<MeshVertexAttribute, TVertexBuffer>;
+using IndexBuffer32 = std::vector<uint32_t>;
+using VertexBufferCollection = std::unordered_map<MeshVertexAttribute, ByteArray>;
 
 struct MeshAnimation;
-using TMeshAnimations = std::vector<std::unique_ptr<MeshAnimation>>;
+using MeshAnimations = std::vector<std::unique_ptr<MeshAnimation>>;
 
-using TBoneIndices = std::unordered_map<std::string, uint32_t>;
+using BoneIndicesCollection = std::unordered_map<std::string, uint32_t>;
 
 class VertexArray
 {
@@ -99,8 +98,8 @@ public:
 
   struct MeshGroup
   {
-    TVertexBufferCollection m_vertexBuffers;
-    TIndexBuffer m_indexBuffer;
+    VertexBufferCollection m_vertexBuffers;
+    IndexBuffer32 m_indexBuffer;
     AABB m_boundingBox;
     int m_groupIndex = -1;
     uint32_t m_verticesCount = 0;
@@ -128,9 +127,9 @@ private:
   uint32_t m_componentsMask = 0;
   int m_groupsCount = 0;
 
-  TMaterialCollection m_materials;
-  TMeshAnimations m_animations;
-  TBoneIndices m_bonesIndices;
+  MaterialCollection m_materials;
+  MeshAnimations m_animations;
+  BoneIndicesCollection m_bonesIndices;
 
   std::unique_ptr<MeshNode> m_rootNode;
   std::unique_ptr<MeshNode> m_bonesRootNode;

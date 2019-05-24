@@ -4,44 +4,70 @@
 
 namespace rf
 {
-char const * const kLogFileName = "log.txt";
-
-std::ofstream g_logFile;
-unsigned char Logger::outputFlags = static_cast<unsigned char>(Logger::OutputFlags::CONSOLE);
-
-void Logger::ToLog(std::string const & message)
+namespace
 {
-  if ((outputFlags & static_cast<unsigned char>(OutputFlags::CONSOLE)) != 0)
+char const * const kLogFileName = "log.txt";
+std::ofstream g_logFile;
+std::mutex g_logMutex;
+
+std::string SeverityToString(Logger::Severity s)
+{
+  switch (s)
   {
-    std::cout << message;
+    case Logger::Severity::Error:
+      return "Error: ";
+    case Logger::Severity::Warning:
+      return "Warning: ";
+    case Logger::Severity::Info:
+      return "Info: ";
+  }
+  CHECK(false, "Unsupported severity type");
+}
+}  // namespace
+
+unsigned char Logger::outputFlags = static_cast<unsigned char>(Logger::OutputFlags::Console);
+
+void Logger::ToLog(Severity severity, std::string const & message)
+{
+  std::lock_guard<std::mutex> lock(g_logMutex);
+  ToLogImpl(severity, message);
+}
+
+void Logger::ToLogImpl(Severity severity, std::string const & message)
+{
+  if ((outputFlags & static_cast<unsigned char>(OutputFlags::Console)) != 0)
+  {
+    std::cout << SeverityToString(severity) << message << std::endl;
 #ifdef WINDOWS_PLATFORM
-    OutputDebugStringA(message.c_str());
+    OutputDebugStringA((SeverityToString(severity) + message).c_str());
 #endif
   }
-  if ((outputFlags & static_cast<unsigned char>(OutputFlags::FILE)) != 0)
+  if ((outputFlags & static_cast<unsigned char>(OutputFlags::File)) != 0)
   {
     if (g_logFile.is_open())
-      g_logFile << message;
+      g_logFile << SeverityToString(severity) << message << std::endl;
   }
 }
 
-void Logger::ToLogWithFormat(char const * format, ...)
+void Logger::ToLogWithFormat(Severity severity, char const * format, ...)
 {
+  std::lock_guard<std::mutex> lock(g_logMutex);
   std::string fmt(format);
   auto const n = std::count(fmt.begin(), fmt.end(), '%');
   if (n > 0)
   {
-    static char buf[2048];
+    uint32_t constexpr kSize = 2048;
+    static char buf[kSize];
     va_list args;
     va_start(args, format);
-    vsprintf(buf, format, args);
+    vsnprintf(buf, kSize, format, args);
     va_end(args);
 
-    ToLog(buf);
+    ToLogImpl(severity, buf);
   }
   else
   {
-    ToLog(format);
+    ToLogImpl(severity, format);
   }
 }
 
@@ -52,13 +78,15 @@ void Logger::SetOutputFlags(unsigned char flags)
 
 void Logger::Start(unsigned char flags)
 {
+  std::lock_guard<std::mutex> lock(g_logMutex);
   SetOutputFlags(flags);
-  if ((outputFlags & (unsigned char)OutputFlags::FILE) != 0)
+  if ((outputFlags & (unsigned char)OutputFlags::File) != 0)
     g_logFile.open(kLogFileName);
 }
 
 void Logger::Finish()
 {
+  std::lock_guard<std::mutex> lock(g_logMutex);
   if (g_logFile.is_open())
   {
     g_logFile.flush();
@@ -68,6 +96,7 @@ void Logger::Finish()
 
 void Logger::Flush()
 {
+  std::lock_guard<std::mutex> lock(g_logMutex);
   if (g_logFile.is_open())
     g_logFile.flush();
 }

@@ -9,18 +9,26 @@ class Logger
 public:
   enum OutputFlags
   {
-    CONSOLE = 1 << 0,
-    FILE = 1 << 1
+    Console = 1 << 0,
+    File = 1 << 1
   };
 
-  static void Start(unsigned char flags = OutputFlags::CONSOLE);
+  enum Severity
+  {
+    Error,
+    Warning,
+    Info
+  };
+
+  static void Start(unsigned char flags = OutputFlags::Console);
   static void Finish();
   static void Flush();
 
-  static void ToLog(std::string const & message);
-  static void ToLogWithFormat(char const * format, ...);
+  static void ToLog(Severity severity, std::string const & message);
+  static void ToLogWithFormat(Severity severity, char const * format, ...);
 
 private:
+  static void ToLogImpl(Severity severity, std::string const & message);
   static void SetOutputFlags(unsigned char flags);
 
   static unsigned char outputFlags;
@@ -29,7 +37,7 @@ private:
 class LoggerGuard
 {
 public:
-  LoggerGuard(unsigned char flags = Logger::OutputFlags::CONSOLE)
+  explicit LoggerGuard(unsigned char flags = Logger::OutputFlags::Console)
   {
     Logger::Start(flags);
   }

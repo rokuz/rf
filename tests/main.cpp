@@ -4,7 +4,7 @@
 
 int main(int argc, char** argv)
 {
-  rf::Logger::ToLogWithFormat("Test suite started at %s.\n",
+  rf::Logger::ToLogWithFormat(rf::Logger::Info, "Test suite started at %s.",
                               rf::Utils::CurrentTimeDate().c_str());
 
   rf::Window window;

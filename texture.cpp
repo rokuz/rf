@@ -198,14 +198,14 @@ bool Texture::Initialize(std::string const & fileName)
       stbi_load(fileName.c_str(), &info.width, &info.height, &info.components, STBI_rgb_alpha);
   if (info.imageData == nullptr)
   {
-    Logger::ToLogWithFormat("Error: Could not load file '%s'.\n", fileName.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "Could not load file '%s'.", fileName.c_str());
     return false;
   }
 
   m_format = FindFormat(info.components);
   if (m_format == -1)
   {
-    Logger::ToLogWithFormat("Error: Format of file '%s' is unknown.\n", fileName.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "Format of file '%s' is unknown.", fileName.c_str());
     stbi_image_free(info.imageData);
     return false;
   }
@@ -284,9 +284,9 @@ bool Texture::InitializeAsCubemap(std::string const & frontFilename,
 
     if (i > 0 && !AreEqual(info[i], info[i - 1]))
     {
-      Logger::ToLogWithFormat(
-          "Error: could not create a cubemap, files have different properties (width, height, "
-          "components).\n");
+      Logger::ToLogWithFormat(Logger::Error,
+          "Could not create a cubemap, files have different properties (width, height, "
+          "components).");
       cleanFunc();
       return false;
     }
@@ -295,15 +295,15 @@ bool Texture::InitializeAsCubemap(std::string const & frontFilename,
   m_format = FindFormat(info[0].components);
   if (m_format < 0)
   {
-    Logger::ToLogWithFormat("Error: Format of a cubemap is unsupported.\n");
+    Logger::ToLogWithFormat(Logger::Error, "Cubemap format is unsupported.");
     cleanFunc();
     return false;
   }
   m_pixelFormat = FindPixelFormat(m_format);
   if (m_pixelFormat < 0)
   {
-     Logger::ToLogWithFormat(
-        "Error: Could not create a cubemap, pixel format is unsupported.\n");
+     Logger::ToLogWithFormat(Logger::Error,
+       "Could not create a cubemap, pixel format is unsupported.");
     cleanFunc();
     return false;
   }
@@ -368,9 +368,9 @@ bool Texture::InitializeAsArray(std::vector<std::string> const & filenames, bool
 
     if (i > 0 && !AreEqual(info[i], info[i - 1]))
     {
-      Logger::ToLogWithFormat(
-          "Error: could not create an array, files have different properties (width, height, "
-          "components).\n");
+      Logger::ToLogWithFormat(Logger::Error,
+          "Could not create an array, files have different properties (width, height, "
+          "components).");
       cleanFunc();
       return false;
     }
@@ -379,15 +379,15 @@ bool Texture::InitializeAsArray(std::vector<std::string> const & filenames, bool
   m_format = FindFormat(info[0].components);
   if (m_format < 0)
   {
-    Logger::ToLogWithFormat("Error: Format of an array is unsupported.\n");
+    Logger::ToLogWithFormat(Logger::Error, "Format of an array is unsupported.");
     cleanFunc();
     return false;
   }
   m_pixelFormat = FindPixelFormat(m_format);
   if (m_pixelFormat < 0)
   {
-    Logger::ToLogWithFormat(
-        "Error: Could not create an array, pixel format is unsupported.\n");
+    Logger::ToLogWithFormat(Logger::Error,
+      "Could not create an array, pixel format is unsupported.");
     cleanFunc();
     return false;
   }
@@ -483,7 +483,7 @@ std::vector<unsigned char> LoadHeightmapData(std::string const & fileName, unsig
   info.imageData = stbi_load(fileName.c_str(), &info.width, &info.height, &info.components, 0);
   if (info.imageData == nullptr)
   {
-    Logger::ToLogWithFormat("Error: Could not load file '%s'.\n", fileName.c_str());
+    Logger::ToLogWithFormat(Logger::Error, "Could not load file '%s'.", fileName.c_str());
     return std::vector<uint8_t>();
   }
 
@@ -520,8 +520,8 @@ void SaveTextureToPng(std::string const & filename, Texture const & texture)
   int pixelFormat = texture.GetPixelFormat();
   if (pixelFormat < 0)
   {
-    Logger::ToLogWithFormat(
-        "Error: Failed to save file '%s', pixel format is unsupported.\n", filename.c_str());
+    Logger::ToLogWithFormat(Logger::Error,
+      "Failed to save file '%s', pixel format is unsupported.", filename.c_str());
     return;
   }
 
