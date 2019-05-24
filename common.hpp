@@ -55,8 +55,8 @@ using ByteArray = std::vector<uint8_t>;
 #define ENABLE_SHADERS_VALIDATION 1
 
 #ifdef DEBUG
-#define ASSERT()
+#define ASSERT() {}
 #else
-#define ASSERT(condition, s) assert((condition) && s)
+#define ASSERT(condition, s) { assert((condition) && s); }
 #endif
-#define CHECK(condition, s) if ((condition) && s) std::abort()
+#define CHECK(condition, s) { if ((condition) && s) std::abort(); }

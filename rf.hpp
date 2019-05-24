@@ -5,7 +5,7 @@
 #include "free_camera.hpp"
 #include "gpu_program.hpp"
 #include "logger.hpp"
-#include "mesh.hpp"
+#include "base_mesh.hpp"
 #include "texture.hpp"
 #include "window.hpp"
 

@@ -25,7 +25,7 @@ struct MeshMaterial
 
 using MaterialCollection = std::unordered_map<uint32_t, std::shared_ptr<MeshMaterial>>;
 
-enum MeshVertexAttribute
+enum MeshVertexAttribute : uint32_t
 {
   Position = 1 << 0,
   Normal = 1 << 1,
@@ -53,7 +53,22 @@ uint32_t constexpr kMaxBonesPerVertex = 4;
 using IndexBuffer32 = std::vector<uint32_t>;
 using VertexBufferCollection = std::unordered_map<MeshVertexAttribute, ByteArray>;
 
-struct MeshAnimation;
+struct BoneAnimation
+{
+  uint32_t m_boneIndex = 0;
+  std::vector<std::pair<double, glm::vec3>> m_translationKeys;
+  std::vector<std::pair<double, glm::vec3>> m_scaleKeys;
+  std::vector<std::pair<double, glm::quat>> m_rotationKeys;
+};
+
+struct MeshAnimation
+{
+  std::string m_name;
+  double m_durationInTicks = 0.0;
+  double m_ticksPerSecond = 0.0;
+  std::vector<BoneAnimation> m_boneAnimations;
+};
+
 using MeshAnimations = std::vector<std::unique_ptr<MeshAnimation>>;
 
 using BoneIndicesCollection = std::unordered_map<std::string, uint32_t>;
@@ -70,11 +85,11 @@ private:
   GLuint m_vertexArray = 0;
 };
 
-class Mesh
+class BaseMesh
 {
 public:
-  Mesh();
-  ~Mesh();
+  BaseMesh();
+  virtual ~BaseMesh();
 
   bool Initialize(std::string const & fileName);
   bool InitializeAsSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
@@ -86,6 +101,7 @@ public:
   {
     return m_groupsCount;
   }
+
   glm::mat4x4 GetGroupTransform(int index, glm::mat4x4 const & transform) const;
   AABB const & GetGroupBoundingBox(int index) const;
   std::shared_ptr<MeshMaterial> GetGroupMaterial(int index) const;
@@ -140,17 +156,17 @@ private:
   void Destroy();
   void InitBuffers();
   glm::mat4x4 FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime, bool & found);
-  void CalculateBonesTransform(size_t animIndex, double animTime, const Mesh::MeshGroup & group,
-                               std::unique_ptr<Mesh::MeshNode> const & meshNode,
+  void CalculateBonesTransform(size_t animIndex, double animTime, const BaseMesh::MeshGroup & group,
+                               std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                                glm::mat4x4 const & parentTransform,
                                std::vector<glm::mat4x4> & bonesTransforms);
 };
 
-class EmptyVertexBuffer
+class PointMesh
 {
 public:
-  EmptyVertexBuffer();
-  ~EmptyVertexBuffer();
+  PointMesh();
+  ~PointMesh();
   void Initialize();
   void Render();
 

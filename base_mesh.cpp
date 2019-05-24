@@ -1,4 +1,4 @@
-#include "mesh.hpp"
+#include "base_mesh.hpp"
 #include "mesh_generator.hpp"
 
 #include <assimp/postprocess.h>
@@ -11,27 +11,6 @@
 
 namespace rf
 {
-struct BoneAnimation
-{
-  uint32_t m_boneIndex = 0;
-  std::vector<std::pair<double, glm::vec3>> m_translationKeys;
-  std::vector<std::pair<double, glm::vec3>> m_scaleKeys;
-  std::vector<std::pair<double, glm::quat>> m_rotationKeys;
-};
-
-struct MeshAnimation
-{
-  std::string m_name;
-  double m_durationInTicks = 0.0;
-  double m_ticksPerSecond = 0.0;
-  std::vector<BoneAnimation> m_boneAnimations;
-};
-
-struct BoneData
-{
-  float data[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-};
-
 void ForEachAttribute(uint32_t componentsMask,
                       std::function<void(MeshVertexAttribute)> const & func)
 {
@@ -58,6 +37,11 @@ void ForEachAttributeWithCheck(uint32_t componentsMask,
 namespace
 {
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+struct BoneData
+{
+  float data[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+};
 
 uint32_t GetAttributeElements(MeshVertexAttribute attr)
 {
@@ -146,7 +130,7 @@ uint32_t GetAttributeSize(MeshVertexAttribute attr)
   return GetAttributeElements(attr) * sizeof(float);
 }
 
-void CopyVertexBuffer(Mesh::MeshGroup & group, MeshVertexAttribute attr, void const * data,
+void CopyVertexBuffer(BaseMesh::MeshGroup & group, MeshVertexAttribute attr, void const * data,
                       uint32_t numVertices)
 {
   auto const sizeInBytes = numVertices * GetAttributeSize(attr);
@@ -155,7 +139,7 @@ void CopyVertexBuffer(Mesh::MeshGroup & group, MeshVertexAttribute attr, void co
 }
 
 template <typename TData>
-void CopyVertexBufferPartially(Mesh::MeshGroup & group, MeshVertexAttribute attr,
+void CopyVertexBufferPartially(BaseMesh::MeshGroup & group, MeshVertexAttribute attr,
                                TData const * data, uint32_t numVertices)
 {
   uint32_t const attrSize = GetAttributeSize(attr);
@@ -172,7 +156,7 @@ void CopyVertexBufferPartially(Mesh::MeshGroup & group, MeshVertexAttribute attr
   }
 }
 
-void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
+void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * scene,
               aiNode const * node, uint32_t & componentsMask, uint32_t & verticesCount,
               uint32_t & indicesCount, int & groupIndex, BoneIndicesCollection & bonesIndices)
 {
@@ -184,7 +168,7 @@ void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
     aiMesh const * mesh = scene->mMeshes[node->mMeshes[meshIndex]];
     uint32_t const numVertices = mesh->mNumVertices;
 
-    Mesh::MeshGroup group;
+    BaseMesh::MeshGroup group;
     if (mesh->HasPositions())
       CopyVertexBuffer(group, MeshVertexAttribute::Position, mesh->mVertices, numVertices);
 
@@ -295,7 +279,7 @@ void LoadNode(std::unique_ptr<Mesh::MeshNode> & meshNode, aiScene const * scene,
   meshNode->m_children.reserve(node->mNumChildren);
   for (uint32_t nodeIndex = 0; nodeIndex < node->mNumChildren; nodeIndex++)
   {
-    auto childNode = std::make_unique<Mesh::MeshNode>();
+    auto childNode = std::make_unique<BaseMesh::MeshNode>();
     LoadNode(childNode, scene, node->mChildren[nodeIndex], componentsMask, verticesCount,
              indicesCount, groupIndex, bonesIndices);
     meshNode->m_children.push_back(std::move(childNode));
@@ -336,7 +320,7 @@ void CreateVertexArray(uint32_t componentsMask)
   });
 }
 
-void FillGPUBuffers(std::unique_ptr<Mesh::MeshNode> & meshNode, uint8_t * vbPtr, uint32_t * ibPtr,
+void FillGPUBuffers(std::unique_ptr<BaseMesh::MeshNode> & meshNode, uint8_t * vbPtr, uint32_t * ibPtr,
                     uint32_t & vbOffset, uint32_t & ibOffset, uint32_t componentsMask)
 {
   if (!meshNode->m_groups.empty())
@@ -344,7 +328,7 @@ void FillGPUBuffers(std::unique_ptr<Mesh::MeshNode> & meshNode, uint8_t * vbPtr,
     uint32_t const vertexSize = GetVertexSize(componentsMask);
     for (size_t i = 0; i < meshNode->m_groups.size(); i++)
     {
-      Mesh::MeshGroup & group = meshNode->m_groups[i];
+      BaseMesh::MeshGroup & group = meshNode->m_groups[i];
 
       // fill vertex buffer
       uint8_t * ptr = vbPtr + vbOffset;
@@ -377,7 +361,7 @@ void FillGPUBuffers(std::unique_ptr<Mesh::MeshNode> & meshNode, uint8_t * vbPtr,
     FillGPUBuffers(meshNode->m_children[i], vbPtr, ibPtr, vbOffset, ibOffset, componentsMask);
 }
 
-glm::mat4x4 CalculateTransform(int index, std::unique_ptr<Mesh::MeshNode> const & meshNode,
+glm::mat4x4 CalculateTransform(int index, std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                                glm::mat4x4 const & m, bool & found)
 {
   glm::mat4x4 t = meshNode->m_transform * m;
@@ -400,9 +384,9 @@ glm::mat4x4 CalculateTransform(int index, std::unique_ptr<Mesh::MeshNode> const 
   return t;
 }
 
-Mesh::MeshGroup const & FindMeshGroup(int index, std::unique_ptr<Mesh::MeshNode> const & meshNode)
+BaseMesh::MeshGroup const & FindMeshGroup(int index, std::unique_ptr<BaseMesh::MeshNode> const & meshNode)
 {
-  static Mesh::MeshGroup invalidGroup;
+  static BaseMesh::MeshGroup invalidGroup;
   for (size_t i = 0; i < meshNode->m_groups.size(); i++)
   {
     if (meshNode->m_groups[i].m_groupIndex == index)
@@ -411,7 +395,7 @@ Mesh::MeshGroup const & FindMeshGroup(int index, std::unique_ptr<Mesh::MeshNode>
 
   for (size_t i = 0; i < meshNode->m_children.size(); i++)
   {
-    Mesh::MeshGroup const & r = FindMeshGroup(index, meshNode->m_children[i]);
+    BaseMesh::MeshGroup const & r = FindMeshGroup(index, meshNode->m_children[i]);
     if (r.m_groupIndex >= 0)
       return r;
   }
@@ -481,7 +465,7 @@ glm::mat4x4 CalculateBoneAnimation(BoneAnimation const & boneAnim, double animTi
   return glm::scale(glm::translate(glm::mat4x4(rot), pos), sc);
 }
 
-bool FindBonesInHierarchy(std::unique_ptr<Mesh::MeshNode> & node, BoneIndicesCollection const & bonesIndices)
+bool FindBonesInHierarchy(std::unique_ptr<BaseMesh::MeshNode> & node, BoneIndicesCollection const & bonesIndices)
 {
   if (bonesIndices.find(node->m_name) != bonesIndices.end())
     return true;
@@ -518,7 +502,7 @@ void VertexArray::Bind()
   glBindVertexArray(m_vertexArray);
 }
 
-Mesh::Mesh()
+BaseMesh::BaseMesh()
   : m_vertexBuffer(0),
     m_indexBuffer(0),
     m_isLoaded(false),
@@ -529,12 +513,12 @@ Mesh::Mesh()
 {
 }
 
-Mesh::~Mesh()
+BaseMesh::~BaseMesh()
 {
   Destroy();
 }
 
-void Mesh::Destroy()
+void BaseMesh::Destroy()
 {
   if (m_vertexBuffer != 0)
   {
@@ -563,7 +547,7 @@ void Mesh::Destroy()
   m_isLoaded = false;
 }
 
-bool Mesh::Initialize(std::string const & fileName)
+bool BaseMesh::Initialize(std::string const & fileName)
 {
   Destroy();
 
@@ -574,7 +558,7 @@ bool Mesh::Initialize(std::string const & fileName)
   return true;
 }
 
-glm::mat4x4 Mesh::GetGroupTransform(int index, glm::mat4x4 const & transform) const
+glm::mat4x4 BaseMesh::GetGroupTransform(int index, glm::mat4x4 const & transform) const
 {
   if (index < 0 || index >= m_groupsCount)
     return glm::mat4x4();
@@ -582,7 +566,7 @@ glm::mat4x4 Mesh::GetGroupTransform(int index, glm::mat4x4 const & transform) co
   return CalculateTransform(index, m_rootNode, transform, found);
 }
 
-AABB const & Mesh::GetGroupBoundingBox(int index) const
+AABB const & BaseMesh::GetGroupBoundingBox(int index) const
 {
   static AABB emptyBox;
   if (index < 0 || index >= m_groupsCount)
@@ -595,7 +579,7 @@ AABB const & Mesh::GetGroupBoundingBox(int index) const
   return group.m_boundingBox;
 }
 
-AABB Mesh::GetBoundingBox() const
+AABB BaseMesh::GetBoundingBox() const
 {
   if (m_groupsCount == 0)
     return {};
@@ -605,7 +589,7 @@ AABB Mesh::GetBoundingBox() const
   return box;
 }
 
-std::shared_ptr<MeshMaterial> Mesh::GetGroupMaterial(int index) const
+std::shared_ptr<MeshMaterial> BaseMesh::GetGroupMaterial(int index) const
 {
   if (index < 0 || index >= m_groupsCount)
     return nullptr;
@@ -617,12 +601,12 @@ std::shared_ptr<MeshMaterial> Mesh::GetGroupMaterial(int index) const
   return it != m_materials.end() ? it->second : nullptr;
 }
 
-size_t Mesh::GetAnimationsCount() const
+size_t BaseMesh::GetAnimationsCount() const
 {
   return m_animations.size();
 }
 
-glm::mat4x4 Mesh::FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime,
+glm::mat4x4 BaseMesh::FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime,
                                     bool & found)
 {
   for (size_t i = 0; i < m_animations[animIndex]->m_boneAnimations.size(); i++)
@@ -639,8 +623,8 @@ glm::mat4x4 Mesh::FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double
   return glm::mat4x4();
 }
 
-void Mesh::CalculateBonesTransform(size_t animIndex, double animTime, Mesh::MeshGroup const & group,
-                                   std::unique_ptr<Mesh::MeshNode> const & meshNode,
+void BaseMesh::CalculateBonesTransform(size_t animIndex, double animTime, BaseMesh::MeshGroup const & group,
+                                   std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                                    glm::mat4x4 const & parentTransform,
                                    std::vector<glm::mat4x4> & bonesTransforms)
 {
@@ -667,7 +651,7 @@ void Mesh::CalculateBonesTransform(size_t animIndex, double animTime, Mesh::Mesh
   }
 }
 
-void Mesh::GetBonesTransforms(int groupIndex, size_t animIndex, double timeSinceStart, bool cycled,
+void BaseMesh::GetBonesTransforms(int groupIndex, size_t animIndex, double timeSinceStart, bool cycled,
                               std::vector<glm::mat4x4> & bonesTransforms)
 {
   if (bonesTransforms.size() < kMaxBonesNumber)
@@ -689,7 +673,7 @@ void Mesh::GetBonesTransforms(int groupIndex, size_t animIndex, double timeSince
   CalculateBonesTransform(animIndex, animTime, group, m_bonesRootNode, glm::mat4x4(), bonesTransforms);
 }
 
-void Mesh::RenderGroup(int index, uint32_t instancesCount) const
+void BaseMesh::RenderGroup(int index, uint32_t instancesCount) const
 {
   if (index < 0 || index >= m_groupsCount || instancesCount == 0)
     return;
@@ -714,7 +698,7 @@ void Mesh::RenderGroup(int index, uint32_t instancesCount) const
   }
 }
 
-bool Mesh::LoadMesh(std::string const & filename)
+bool BaseMesh::LoadMesh(std::string const & filename)
 {
   using namespace Assimp;
   MeshLogGuard logGuard(filename);
@@ -842,14 +826,14 @@ bool Mesh::LoadMesh(std::string const & filename)
   return true;
 }
 
-bool Mesh::InitializeAsSphere(float radius, uint32_t componentsMask)
+bool BaseMesh::InitializeAsSphere(float radius, uint32_t componentsMask)
 {
   MeshGenerator generator;
-  Mesh::MeshGroup meshGroup;
+  BaseMesh::MeshGroup meshGroup;
   if (!generator.GenerateSphere(radius, componentsMask, meshGroup))
     return false;
 
-  m_rootNode.reset(new MeshNode());
+  m_rootNode = std::make_unique<MeshNode>();
   m_componentsMask = componentsMask;
   m_verticesCount = meshGroup.m_verticesCount;
   m_indicesCount = meshGroup.m_indicesCount;
@@ -866,18 +850,18 @@ bool Mesh::InitializeAsSphere(float radius, uint32_t componentsMask)
   return true;
 }
 
-bool Mesh::InitializeAsPlane(float width, float height, uint32_t widthSegments, uint32_t heightSegments,
+bool BaseMesh::InitializeAsPlane(float width, float height, uint32_t widthSegments, uint32_t heightSegments,
                              uint32_t uSegments, uint32_t vSegments, uint32_t componentsMask)
 {
   MeshGenerator generator;
-  Mesh::MeshGroup meshGroup;
+  BaseMesh::MeshGroup meshGroup;
   if (!generator.GeneratePlane(width, height, componentsMask, meshGroup, widthSegments,
                                heightSegments, uSegments, vSegments))
   {
     return false;
   }
 
-  m_rootNode.reset(new MeshNode());
+  m_rootNode = std::make_unique<MeshNode>();
   m_componentsMask = componentsMask;
   m_verticesCount = meshGroup.m_verticesCount;
   m_indicesCount = meshGroup.m_indicesCount;
@@ -894,7 +878,7 @@ bool Mesh::InitializeAsPlane(float width, float height, uint32_t widthSegments, 
   return true;
 }
 
-void Mesh::InitBuffers()
+void BaseMesh::InitBuffers()
 {
   uint32_t vbOffset = 0;
   uint32_t ibOffset = 0;
@@ -920,15 +904,16 @@ void Mesh::InitBuffers()
   }
 }
 
-EmptyVertexBuffer::EmptyVertexBuffer() : m_vertexBuffer(0)
+PointMesh::PointMesh()
+  : m_vertexBuffer(0)
 {}
 
-EmptyVertexBuffer::~EmptyVertexBuffer()
+PointMesh::~PointMesh()
 {
   Destroy();
 }
 
-void EmptyVertexBuffer::Initialize()
+void PointMesh::Initialize()
 {
   glGenBuffers(1, &m_vertexBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
@@ -937,14 +922,14 @@ void EmptyVertexBuffer::Initialize()
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void EmptyVertexBuffer::Render()
+void PointMesh::Render()
 {
   m_vertexArray->Bind();
   glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
   glDrawArrays(GL_POINTS, 0, 1);
 }
 
-void EmptyVertexBuffer::Destroy()
+void PointMesh::Destroy()
 {
   if (m_vertexBuffer != 0)
   {

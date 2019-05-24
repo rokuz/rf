@@ -203,7 +203,7 @@ void CopyToVertexBuffer(ByteArray & vb, std::vector<T> const & v)
 }  // namespace
 
 bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
-                                   Mesh::MeshGroup & meshGroup)
+                                   BaseMesh::MeshGroup & meshGroup)
 {
   if (componentsMask == 0)
   {
@@ -289,7 +289,7 @@ bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
 }
 
 bool MeshGenerator::GeneratePlane(float width, float height, uint32_t componentsMask,
-                                  Mesh::MeshGroup & meshGroup, uint32_t widthSegments,
+                                  BaseMesh::MeshGroup & meshGroup, uint32_t widthSegments,
                                   uint32_t heightSegments, uint32_t uSegments, uint32_t vSegments)
 {
   if (componentsMask == 0)

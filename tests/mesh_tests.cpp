@@ -4,7 +4,7 @@
 
 TEST(Mesh, Smoke)
 {
-  rf::Mesh mesh;
+  rf::BaseMesh mesh;
 
   EXPECT_EQ(true, mesh.InitializeAsSphere(1.0f));
 }

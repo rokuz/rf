@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace rf
@@ -7,7 +8,7 @@ namespace rf
 class Logger
 {
 public:
-  enum OutputFlags
+  enum OutputFlags : uint8_t
   {
     Console = 1 << 0,
     File = 1 << 1
