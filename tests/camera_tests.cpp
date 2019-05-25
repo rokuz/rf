@@ -26,5 +26,17 @@ TEST(Camera, Smoke)
 TEST(FreeCamera, Smoke)
 {
   rf::FreeCamera camera;
+  camera.Setup(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0, 1.0f, 1.0f));
+  camera.SetSpeed(1.0f);
+  camera.OnKeyButton(GLFW_KEY_W, true /* pressed */);
+  camera.Update(1.0f /* in seconds */, 1024, 768);
+  camera.OnKeyButton(GLFW_KEY_W, false /* pressed */);
+
+  EXPECT_FLOAT_EQ(camera.GetPosition().z, 1.0f);
+
+  camera.OnMouseButton(100.0f, 100.0f, GLFW_MOUSE_BUTTON_1, true /* pressed */);
+  camera.OnMouseMove(150.0, 100.0f);
+  camera.Update(1.0f /* in seconds */, 1024, 768);
+  camera.OnMouseButton(150.0f, 100.0f, GLFW_MOUSE_BUTTON_1, false /* pressed */);
   //TODO
 }

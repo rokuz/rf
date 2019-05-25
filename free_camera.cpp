@@ -38,7 +38,7 @@ void FreeCamera::OnKeyButton(int key, bool pressed)
   }
 }
 
-void FreeCamera::OnMouseButton(double xpos, double ypos, int button,
+void FreeCamera::OnMouseButton(float xpos, float ypos, int button,
                                bool pressed)
 {
   if (button == GLFW_MOUSE_BUTTON_1)
@@ -46,8 +46,8 @@ void FreeCamera::OnMouseButton(double xpos, double ypos, int button,
     if (pressed)
     {
       m_rotationMode = true;
-      m_lastMousePosition.x = static_cast<float>(xpos);
-      m_lastMousePosition.y = static_cast<float>(ypos);
+      m_lastMousePosition.x = xpos;
+      m_lastMousePosition.y = ypos;
       m_currentMousePosition = m_lastMousePosition;
       m_updateTime = 0.0;
     }
@@ -58,13 +58,10 @@ void FreeCamera::OnMouseButton(double xpos, double ypos, int button,
   }
 }
 
-void FreeCamera::OnMouseMove(double xpos, double ypos)
+void FreeCamera::OnMouseMove(float xpos, float ypos)
 {
   if (m_rotationMode)
-  {
-    m_currentMousePosition = glm::vec2(static_cast<float>(xpos),
-                                       static_cast<float>(ypos));
-  }
+    m_currentMousePosition = glm::vec2(xpos, ypos);
 }
 
 void FreeCamera::Update(double elapsedTime, uint32_t screenWidth,

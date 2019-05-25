@@ -1,16 +1,14 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 project(rf)
 
-OPTION(RF_AABB_BUILD_TESTS "If the test suite is built in addition to the framework." ON)
+OPTION(RF_BUILD_TESTS "If the test suite is built in addition to the framework." ON)
 
 if (APPLE)
   add_definitions(-Wno-deprecated)
 endif()
 
 set(CMAKE_MACOSX_RPATH OFF)
-set(BUILD_SHARED_LIBS OFF)
-set(gtest_force_shared_crt ON)
 set(CMAKE_CXX_STANDARD 17)
 
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
@@ -57,7 +55,7 @@ set(SOURCE_ROOT .)
 aux_source_directory(${SOURCE_ROOT} SRC_LIST)
 add_library(${PROJECT_NAME} STATIC ${SRC_LIST})
 
-if (RF_AABB_BUILD_TESTS)
+if (RF_BUILD_TESTS)
   add_subdirectory(3party/googletest)
   add_subdirectory(tests)
 endif()

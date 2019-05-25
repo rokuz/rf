@@ -12,8 +12,8 @@ public:
   void Setup(glm::vec3 const & from, glm::vec3 const & to);
 
   void OnKeyButton(int key, bool pressed);
-  void OnMouseButton(double xpos, double ypos, int button, bool pressed);
-  void OnMouseMove(double xpos, double ypos);
+  void OnMouseButton(float xpos, float ypos, int button, bool pressed);
+  void OnMouseMove(float xpos, float ypos);
 
   void Update(double elapsedTime, uint32_t screenWidth, uint32_t screenHeight);
 
