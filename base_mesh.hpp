@@ -73,41 +73,17 @@ using MeshAnimations = std::vector<std::unique_ptr<MeshAnimation>>;
 
 using BoneIndicesCollection = std::unordered_map<std::string, uint32_t>;
 
-class VertexArray
-{
-public:
-  explicit VertexArray(uint32_t componentsMask);
-  ~VertexArray();
-
-  void Bind();
-
-private:
-  GLuint m_vertexArray = 0;
-};
-
 class BaseMesh
 {
 public:
   BaseMesh();
   virtual ~BaseMesh();
 
-  bool Initialize(std::string const & fileName);
-  bool InitializeAsSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
-  bool InitializeAsPlane(float width, float height, uint32_t widthSegments = 1,
-                   uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
-                   uint32_t componentsMask = Position | Normal | UV0 | Tangent);
-
-  int GetGroupsCount() const
-  {
-    return m_groupsCount;
-  }
-
+  int GetGroupsCount() const { return m_groupsCount; }
   glm::mat4x4 GetGroupTransform(int index, glm::mat4x4 const & transform) const;
   AABB const & GetGroupBoundingBox(int index) const;
   std::shared_ptr<MeshMaterial> GetGroupMaterial(int index) const;
   AABB GetBoundingBox() const;
-  void RenderGroup(int index, uint32_t instancesCount = 1) const;
-
   size_t GetAnimationsCount() const;
   void GetBonesTransforms(int groupIndex, size_t animIndex, double timeSinceStart, bool cycled,
                           std::vector<glm::mat4x4> & bonesTransforms);
@@ -133,11 +109,7 @@ public:
     std::vector<std::unique_ptr<MeshNode>> m_children;
   };
 
-private:
-  std::unique_ptr<VertexArray> m_vertexArray;
-  GLuint m_vertexBuffer = 0;
-  GLuint m_indexBuffer = 0;
-
+protected:
   uint32_t m_verticesCount = 0;
   uint32_t m_indicesCount = 0;
   uint32_t m_componentsMask = 0;
@@ -150,35 +122,38 @@ private:
   std::unique_ptr<MeshNode> m_rootNode;
   std::unique_ptr<MeshNode> m_bonesRootNode;
 
+  mutable std::vector<MeshGroup const *> m_groupsCache;
+
   bool m_isLoaded = false;
 
   bool LoadMesh(std::string const & filename);
-  void Destroy();
-  void InitBuffers();
+  bool GenerateSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
+  bool GeneratePlane(float width, float height, uint32_t widthSegments = 1,
+                     uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
+                     uint32_t componentsMask = Position | Normal | UV0 | Tangent);
+  void DestroyMesh();
+
   glm::mat4x4 FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime, bool & found);
   void CalculateBonesTransform(size_t animIndex, double animTime, const BaseMesh::MeshGroup & group,
                                std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                                glm::mat4x4 const & parentTransform,
                                std::vector<glm::mat4x4> & bonesTransforms);
-};
 
-class PointMesh
-{
-public:
-  PointMesh();
-  ~PointMesh();
-  void Initialize();
-  void Render();
+  void FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> & meshNode, uint8_t * vbPtr, uint32_t * ibPtr,
+                      uint32_t & vbOffset, uint32_t & ibOffset, uint32_t componentsMask);
 
-private:
-  void Destroy();
-
-  std::unique_ptr<VertexArray> m_vertexArray;
-  GLuint m_vertexBuffer = 0;
+  MeshGroup const & FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode, int index) const;
+  MeshGroup const & FindCachedMeshGroup(int index) const;
 };
 
 extern void ForEachAttribute(uint32_t componentsMask,
                              std::function<void(MeshVertexAttribute)> const & func);
 extern void ForEachAttributeWithCheck(uint32_t componentsMask,
                                       std::function<bool(MeshVertexAttribute)> const & func);
+
+extern uint32_t GetAttributeElementsCount(MeshVertexAttribute attr);
+extern uint32_t GetAttributeSizeInBytes(MeshVertexAttribute attr);
+extern uint32_t GetAttributeOffsetInBytes(uint32_t componentsMask, MeshVertexAttribute attr);
+
+extern uint32_t GetVertexSizeInBytes(uint32_t componentsMask);
 }  // namespace rf

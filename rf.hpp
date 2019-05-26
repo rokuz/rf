@@ -1,13 +1,17 @@
 #pragma once
 
+#include "base_mesh.hpp"
 #include "camera.hpp"
 #include "common.hpp"
 #include "free_camera.hpp"
-#include "gpu_program.hpp"
 #include "logger.hpp"
-#include "base_mesh.hpp"
-#include "texture.hpp"
 #include "window.hpp"
+
+#ifdef API_OPENGL
+#include "gl/gpu_program.hpp"
+#include "gl/mesh.hpp"
+#include "gl/texture.hpp"
+#endif
 
 namespace rf
 {
@@ -53,4 +57,6 @@ public:
 };
 }  // namespace rf
 
+#ifdef API_OPENGL
 #define glCheckError() rf::Utils::CheckForOpenGLError(__FILE__, __FUNCTION__, __LINE__)
+#endif

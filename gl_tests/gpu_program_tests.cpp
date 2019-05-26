@@ -1,3 +1,4 @@
+#define API_OPENGL
 #include "rf.hpp"
 
 #include <gtest/gtest.h>
@@ -24,6 +25,6 @@ TEST(GpuProgram, Smoke)
       "  oColor = texture(uTexture, vUV0);\n"
       "}"};
 
-  rf::GpuProgram program;
+  rf::gl::GpuProgram program;
   EXPECT_EQ(true, program.Initialize({kVertexShaderCode, "", kFragmentShaderCode}, false /* areFiles */));
 }

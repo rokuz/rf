@@ -1,8 +1,9 @@
 #pragma once
+#define API_OPENGL
 
 #include "common.hpp"
 
-namespace rf
+namespace rf::gl
 {
 class Texture
 {
@@ -23,22 +24,10 @@ public:
 
   void Bind();
 
-  size_t GetWidth() const
-  {
-    return m_width;
-  }
-  size_t GetHeight() const
-  {
-    return m_height;
-  }
-  int GetFormat() const
-  {
-    return m_format;
-  }
-  int GetPixelFormat() const
-  {
-    return m_pixelFormat;
-  }
+  size_t GetWidth() const { return m_width; }
+  size_t GetHeight() const { return m_height; }
+  int GetFormat() const { return m_format; }
+  int GetPixelFormat() const { return m_pixelFormat; }
 
 private:
   GLuint m_texture = 0;
@@ -58,8 +47,7 @@ private:
   friend void SaveTextureToPng(std::string const &, Texture const &);
 };
 
-std::vector<unsigned char> LoadHeightmapData(std::string const & fileName,
-		                                         unsigned int & width,
-                                             unsigned int & height);
-void SaveTextureToPng(std::string const & filename, Texture const & texture);
-}  // namespace rf
+extern std::vector<uint8_t> LoadHeightmapData(std::string const & fileName,
+                                              uint32_t & width, uint32_t & height);
+extern void SaveTextureToPng(std::string const & filename, Texture const & texture);
+}  // namespace rf::gl

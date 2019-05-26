@@ -1,10 +1,11 @@
+#define API_OPENGL
 #include "rf.hpp"
 
 #include <gtest/gtest.h>
 
 TEST(Texture, Smoke)
 {
-  rf::Texture tex;
+  rf::gl::Texture tex;
   size_t constexpr width = 100;
   size_t constexpr height = 50;
 
@@ -26,7 +27,7 @@ TEST(Texture, Smoke)
   EXPECT_EQ(true, tex.InitializeWithData(GL_RGBA8, buf.data(), width, height, true));
 
   char const * const kFilename = "test.png";
-  rf::SaveTextureToPng(kFilename, tex);
+  rf::gl::SaveTextureToPng(kFilename, tex);
 
   EXPECT_EQ(true, rf::Utils::IsPathExisted(kFilename));
 

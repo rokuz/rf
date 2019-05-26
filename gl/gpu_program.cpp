@@ -4,7 +4,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-namespace rf
+namespace rf::gl
 {
 namespace
 {
@@ -21,7 +21,7 @@ ShaderType GetTypeByExt(std::vector<std::string> const & exts)
   return ShaderType::Count;
 }
 
-GLenum GetOGLShaderType(ShaderType type)
+GLenum GetOpenGLShaderType(ShaderType type)
 {
   switch (type)
   {
@@ -109,6 +109,17 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
     {
       m_shaders[static_cast<size_t>(shaderIndex)] = s;
     }
+    shaderIndex++;
+  }
+
+  shaderIndex = 0;
+  for (auto const & s : m_shaders)
+  {
+    if (s.empty())
+    {
+      shaderIndex++;
+      continue;
+    }
 
     GLuint shader;
     if (!CompileShader(static_cast<ShaderType>(shaderIndex), &shader))
@@ -142,10 +153,6 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
     return false;
   }
 
-#if (ENABLE_SHADERS_VALIDATION)
-  ValidateProgram(m_program);
-#endif
-
   for (auto const s : compiledShaders)
   {
     glDetachShader(m_program, s);
@@ -174,11 +181,10 @@ bool GpuProgram::CompileShader(ShaderType type, GLuint * shader)
   GLint status;
   GLchar const * source = m_shaders[static_cast<size_t>(type)].c_str();
 
-  *shader = glCreateShader(GetOGLShaderType(type));
+  *shader = glCreateShader(GetOpenGLShaderType(type));
   glShaderSource(*shader, 1, &source, nullptr);
   glCompileShader(*shader);
 
-#if (ENABLE_SHADERS_VALIDATION)
   GLint logLength;
   glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
   if (logLength > 0)
@@ -187,7 +193,6 @@ bool GpuProgram::CompileShader(ShaderType type, GLuint * shader)
     glGetShaderInfoLog(*shader, logLength, &logLength, log.data());
     Logger::ToLogWithFormat(Logger::Info, "Shader compilation log:\n  %s", log.data());
   }
-#endif
 
   glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
   if (status == 0)
@@ -204,7 +209,6 @@ bool GpuProgram::LinkProgram(GLuint prog)
   GLint status = 0;
   glLinkProgram(prog);
 
-#if (ENABLE_SHADERS_VALIDATION)
   GLint logLength;
   glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
   if (logLength > 0)
@@ -213,28 +217,30 @@ bool GpuProgram::LinkProgram(GLuint prog)
     glGetProgramInfoLog(prog, logLength, &logLength, log.data());
     Logger::ToLogWithFormat(Logger::Info, "Gpu program linkage log:\n  %s", log.data());
   }
-#endif
 
   glGetProgramiv(prog, GL_LINK_STATUS, &status);
   return status != 0;
 }
 
-void GpuProgram::ValidateProgram(GLuint prog)
+bool GpuProgram::ValidateProgram() const
 {
   GLint logLength;
-
-  glValidateProgram(prog);
-  glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
+  glValidateProgram(m_program);
+  glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &logLength);
   if (logLength > 0)
   {
     std::vector<GLchar> log(logLength);
-    glGetProgramInfoLog(prog, logLength, &logLength, log.data());
+    glGetProgramInfoLog(m_program, logLength, &logLength, log.data());
     if (strcmp(log.data(), "Validation successful.\n") != 0)
+    {
       Logger::ToLogWithFormat(Logger::Warning, "Gpu program validation log:\n  %s", log.data());
+      return false;
+    }
   }
+  return true;
 }
 
-bool GpuProgram::Use()
+bool GpuProgram::Use() const
 {
   if (!IsValid())
     return false;
@@ -263,7 +269,7 @@ bool GpuProgram::BindUniform(std::string const & uniform)
   return true;
 }
 
-std::optional<GLint> GpuProgram::GetUniformLocation(std::string const & uniform)
+std::optional<GLint> GpuProgram::GetUniformLocation(std::string const & uniform) const
 {
   auto const it = m_uniforms.find(uniform);
   if (it == m_uniforms.end())
@@ -475,4 +481,4 @@ void GpuProgram::SetMatrixArray(std::string const & uniform, glm::mat4x4 * mat, 
 //  renderTarget->BindAsImage(index, slot, readFlag, writeFlag);
 //  glUniform1i(uniformIndex, slot);
 //}
-}  // namespace rf
+}  // namespace rf::gl

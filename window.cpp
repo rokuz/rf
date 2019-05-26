@@ -4,9 +4,6 @@
 
 namespace rf
 {
-uint8_t constexpr kOpenGLMajor = 4;
-uint8_t constexpr kOpenGLMinor = 1;
-
 Window * g_window = nullptr;
 
 void KeyCallback(GLFWwindow * window, int key, int scancode, int action, int)
@@ -33,7 +30,10 @@ void MouseCallback(GLFWwindow * window, int button, int action, int)
   double xpos, ypos;
   glfwGetCursorPos(window, &xpos, &ypos);
   if (g_window->m_onMouseButtonHandler)
-    g_window->m_onMouseButtonHandler(xpos, ypos, button, action != GLFW_RELEASE);
+  {
+    g_window->m_onMouseButtonHandler(static_cast<float>(xpos), static_cast<float>(ypos),
+                                     button, action != GLFW_RELEASE);
+  }
 }
 
 void MouseMoveCallback(GLFWwindow *, double xpos, double ypos)
@@ -42,7 +42,7 @@ void MouseMoveCallback(GLFWwindow *, double xpos, double ypos)
     return;
 
   if (g_window->m_onMouseMoveHandler)
-    g_window->m_onMouseMoveHandler(xpos, ypos);
+    g_window->m_onMouseMoveHandler(static_cast<float>(xpos), static_cast<float>(ypos));
 }
 
 Window::Window()
@@ -57,8 +57,14 @@ Window::~Window()
   g_window = nullptr;
 }
 
-bool Window::Initialize(uint32_t screenWidth, uint32_t screenHeight)
+bool Window::InitializeForOpenGL(uint32_t screenWidth, uint32_t screenHeight,
+                                 std::string const & title,
+                                 uint8_t openGLMajorVersion,
+                                 uint8_t openGLMinorVersion)
 {
+  m_screenWidth = screenWidth;
+  m_screenHeight = screenHeight;
+
   glfwSetErrorCallback([](int error, char const * description)
   {
     Logger::ToLogWithFormat(Logger::Error, "GLFW: (%d): %s", error, description);
@@ -68,15 +74,16 @@ bool Window::Initialize(uint32_t screenWidth, uint32_t screenHeight)
     return false;
 
   glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, kOpenGLMajor);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, kOpenGLMinor);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, openGLMajorVersion);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, openGLMinorVersion);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   glfwWindowHint(GLFW_SAMPLES, 0);
 
+  std::string t = title.empty() ? "Rendering framework" : title;
   m_window = glfwCreateWindow(static_cast<int>(screenWidth),
                               static_cast<int>(screenHeight),
-                              "Rendering framework", nullptr, nullptr);
+                              t.c_str(), nullptr, nullptr);
   if (m_window == nullptr)
   {
     glfwTerminate();
@@ -92,15 +99,15 @@ bool Window::Initialize(uint32_t screenWidth, uint32_t screenHeight)
 #ifdef WINDOWS_PLATFORM
   if (gl3wInit() < 0)
   {
-    Logger::ToLog("Error: OpenGL initialization failed.");
+    Logger::ToLog(Logger::Error, "OpenGL initialization failed.");
     glfwTerminate();
     return false;
   }
 
-  if (!gl3wIsSupported(kOpenGLMajor, kOpenGLMinor))
+  if (!gl3wIsSupported(openGLMajorVersion, openGLMinorVersion))
   {
-    Logger::ToLogWithFormat("Error: OpenGL version %d.%d is not supported.",
-                            kOpenGLMajor, kOpenGLMinor);
+    Logger::ToLogWithFormat(Logger::Error, "OpenGL version %d.%d is not supported.",
+                            openGLMajorVersion, openGLMinorVersion);
     glfwTerminate();
     return false;
   }

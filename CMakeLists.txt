@@ -51,11 +51,13 @@ if (APPLE)
   add_definitions(-DGL_SILENCE_DEPRECATION)
 endif()
 
-set(SOURCE_ROOT .)
-aux_source_directory(${SOURCE_ROOT} SRC_LIST)
-add_library(${PROJECT_NAME} STATIC ${SRC_LIST})
+aux_source_directory(. SRC_LIST)
+aux_source_directory(./gl GL_SRC_LIST)
+
+add_library(${PROJECT_NAME} STATIC ${SRC_LIST} ${GL_SRC_LIST})
 
 if (RF_BUILD_TESTS)
   add_subdirectory(3party/googletest)
   add_subdirectory(tests)
+  add_subdirectory(gl_tests)
 endif()

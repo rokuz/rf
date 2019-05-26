@@ -1,10 +1,11 @@
 #pragma once
+#define API_OPENGL
 
 #include "common.hpp"
 
-namespace rf
+namespace rf::gl
 {
-enum class ShaderType
+enum class ShaderType : uint8_t
 {
   Vertex = 0,
   Geometry,
@@ -13,9 +14,9 @@ enum class ShaderType
   Count
 };
 
-class RenderTarget;
+//class RenderTarget;
 class Texture;
-class UniformBuffer;
+//class UniformBuffer;
 
 class GpuProgram
 {
@@ -26,10 +27,9 @@ public:
   bool Initialize(std::initializer_list<std::string> sources, bool areFiles = true);
   void Destroy();
   bool IsValid() const;
+	bool Use() const;
 
-	bool Use();
-
-  std::optional<GLint> GetUniformLocation(std::string const & uniformName);
+  std::optional<GLint> GetUniformLocation(std::string const & uniformName) const;
 
   void SetFloat(std::string const & uniform, float v);
   void SetUint(std::string const & uniform, unsigned int v);
@@ -43,6 +43,8 @@ public:
 
   void SetMatrix(std::string const & uniform, glm::mat4x4 const & mat);
   void SetMatrixArray(std::string const & uniform, glm::mat4x4 * mat, int count);
+
+  bool ValidateProgram() const;
 
 //	void SetUniformBuffer(std::string const & uniform, UniformBuffer * buffer,
 //												int index);
@@ -63,7 +65,6 @@ private:
 	bool SetShaderFromFile(std::string const & fileName);
   bool CompileShader(ShaderType type, GLuint * shader);
   bool LinkProgram(GLuint prog);
-  void ValidateProgram(GLuint prog);
 
   GLint GetUniformLocationInternal(std::string const & uniformName);
 
@@ -76,4 +77,4 @@ private:
 //  void SetImageInternal(int uniformIndex, RenderTarget * renderTarget,
 //                        int index, int slot, bool readFlag, bool writeFlag);
 };
-}  // namespace rf
+}  // namespace rf::gl

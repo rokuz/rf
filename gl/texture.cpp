@@ -8,7 +8,7 @@
 
 #include "rf.hpp"
 
-namespace rf
+namespace rf::gl
 {
 namespace
 {
@@ -339,7 +339,7 @@ bool Texture::InitializeAsCubemap(std::string const & frontFilename,
 
 bool Texture::InitializeAsArray(std::vector<std::string> const & filenames, bool mipmaps)
 {
-  assert(filenames.size() > 0);
+  ASSERT(filenames.size() > 0, "");
   Destroy();
 
   stbi_set_flip_vertically_on_load(true);
@@ -475,8 +475,8 @@ void Texture::Bind()
   glBindTexture(m_target, m_texture);
 }
 
-std::vector<unsigned char> LoadHeightmapData(std::string const & fileName, unsigned int & width,
-                                             unsigned int & height)
+std::vector<uint8_t> LoadHeightmapData(std::string const & fileName, uint32_t & width,
+                                       uint32_t & height)
 {
   stbi_set_flip_vertically_on_load(true);
   ImageInfo info;
@@ -531,4 +531,4 @@ void SaveTextureToPng(std::string const & filename, Texture const & texture)
 
   stbi_write_png(filename.c_str(), texture.GetWidth(), texture.GetHeight(), sz, pixels.data(), 0);
 }
-}  // namespace rf
+}  // namespace rf::gl

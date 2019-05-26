@@ -4,12 +4,9 @@
 
 int main(int argc, char** argv)
 {
-  rf::Logger::ToLogWithFormat(rf::Logger::Info, "Test suite started at %s.",
-                              rf::Utils::CurrentTimeDate().c_str());
-
-  rf::Window window;
-  window.Initialize(100, 100);
-
+  rf::Logger::ToLogWithFormat(rf::Logger::Info,
+    "Rendering framework test suite started at %s.",
+    rf::Utils::CurrentTimeDate().c_str());
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
