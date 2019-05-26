@@ -2,6 +2,10 @@
 
 #include "common.hpp"
 
+#ifdef WINDOWS_PLATFORM
+#include <Windows.h>
+#endif
+
 namespace rf
 {
 namespace
@@ -22,6 +26,7 @@ std::string SeverityToString(Logger::Severity s)
       return "Info: ";
   }
   CHECK(false, "Unsupported severity type");
+  return {};
 }
 }  // namespace
 
@@ -39,7 +44,7 @@ void Logger::ToLogImpl(Severity severity, std::string const & message)
   {
     std::cout << SeverityToString(severity) << message << std::endl;
 #ifdef WINDOWS_PLATFORM
-    OutputDebugStringA((SeverityToString(severity) + message).c_str());
+    OutputDebugStringA((SeverityToString(severity) + message + "\n").c_str());
 #endif
   }
   if ((outputFlags & static_cast<unsigned char>(OutputFlags::File)) != 0)

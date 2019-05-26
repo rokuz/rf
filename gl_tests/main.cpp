@@ -13,7 +13,7 @@ int main(int argc, char** argv)
   uint8_t constexpr kOpenGLMajor = 4;
   uint8_t constexpr kOpenGLMinor = 1;
   rf::Window window;
-  window.InitializeForOpenGL(100, 100, kOpenGLMajor, kOpenGLMinor);
+  window.InitializeForOpenGL(100, 100, "", kOpenGLMajor, kOpenGLMinor);
 
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

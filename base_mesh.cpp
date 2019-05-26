@@ -163,7 +163,7 @@ void CopyVertexBufferPartially(BaseMesh::MeshGroup & group, MeshVertexAttribute 
   uint32_t const attrSize = GetAttributeSizeInBytes(attr);
   ASSERT(attrSize <= sizeof(TData), "Invalid data size");
 
-  size_t const sizeInBytes = numVertices * attrSize;
+  auto const sizeInBytes = static_cast<size_t>(numVertices) * attrSize;
   group.m_vertexBuffers[attr].resize(sizeInBytes);
   ByteArray & buffer = group.m_vertexBuffers[attr];
   uint32_t offset = 0;
@@ -271,8 +271,8 @@ void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * sc
     if (mesh->HasBones())
       group.m_boundingBox.scale(glm::vec3(1.5f, 1.5f, 1.5f), group.m_boundingBox.getCenter());
 
-    group.m_indexBuffer.reserve(mesh->mNumFaces * 3);
-    for (int faceIndex = 0; faceIndex < mesh->mNumFaces; faceIndex++)
+    group.m_indexBuffer.reserve(static_cast<size_t>(mesh->mNumFaces) * 3);
+    for (int faceIndex = 0; faceIndex < static_cast<int>(mesh->mNumFaces); ++faceIndex)
     {
       aiFace face = mesh->mFaces[faceIndex];
       if (face.mNumIndices != 3)

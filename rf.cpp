@@ -1,3 +1,5 @@
+#define API_OPENGL
+
 #include "rf.hpp"
 
 #include <sys/stat.h>

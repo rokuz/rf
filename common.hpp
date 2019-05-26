@@ -24,16 +24,22 @@
 #include <unordered_map>
 #include <vector>
 
+#if defined(WIN32) || defined(__WIN32__) || defined(_WIN32) || defined(_MSC_VER)
+#define WINDOWS_PLATFORM
+#undef min
+#undef max
+#pragma warning(disable : 4005)
+#pragma warning(disable : 4267)
+#pragma warning(disable : 4996)
+#endif
+
 #ifdef API_OPENGL
-  #if defined(WIN32) || defined(__WIN32__) || defined(_WIN32) || defined(_MSC_VER)
-  #define WINDOWS_PLATFORM
-  #include "gl3w.h"
-  #undef min
-  #undef max
-  #else
-  #include <OpenGL/gl3.h>
-  #include <OpenGl/gl3ext.h>
-  #endif
+#ifdef WINDOWS_PLATFORM
+#include "gl3w.h"
+#else
+#include <OpenGL/gl3.h>
+#include <OpenGL/gl3ext.h>
+#endif
 #endif
 
 #define GLM_ENABLE_EXPERIMENTAL

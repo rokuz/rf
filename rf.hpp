@@ -1,8 +1,9 @@
 #pragma once
 
+#include "common.hpp"
+
 #include "base_mesh.hpp"
 #include "camera.hpp"
-#include "common.hpp"
 #include "free_camera.hpp"
 #include "logger.hpp"
 #include "window.hpp"

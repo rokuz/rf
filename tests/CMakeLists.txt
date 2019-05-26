@@ -17,6 +17,10 @@ include_directories(../3party/stb)
 
 find_package(OpenGL REQUIRED)
 
+if (WIN32)
+  include_directories(../3party/gl3w)
+endif()
+
 if (UNIX)
   if (NOT APPLE)
     set(PTHREADS "-pthread")

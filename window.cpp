@@ -1,3 +1,5 @@
+#define API_OPENGL
+
 #include "window.hpp"
 
 #include "logger.hpp"
