@@ -110,23 +110,7 @@ public:
   };
 
 protected:
-  uint32_t m_verticesCount = 0;
-  uint32_t m_indicesCount = 0;
-  uint32_t m_componentsMask = 0;
-  int m_groupsCount = 0;
-
-  MaterialCollection m_materials;
-  MeshAnimations m_animations;
-  BoneIndicesCollection m_bonesIndices;
-
-  std::unique_ptr<MeshNode> m_rootNode;
-  std::unique_ptr<MeshNode> m_bonesRootNode;
-
-  mutable std::vector<MeshGroup const *> m_groupsCache;
-
-  bool m_isLoaded = false;
-
-  bool LoadMesh(std::string const & filename);
+  bool LoadMesh(std::string && filename);
   bool GenerateSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
   bool GeneratePlane(float width, float height, uint32_t widthSegments = 1,
                      uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
@@ -144,6 +128,21 @@ protected:
 
   MeshGroup const & FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode, int index) const;
   MeshGroup const & FindCachedMeshGroup(int index) const;
+  
+  bool m_isLoaded = false;
+  uint32_t m_verticesCount = 0;
+  uint32_t m_indicesCount = 0;
+  uint32_t m_componentsMask = 0;
+  int m_groupsCount = 0;
+  
+  MaterialCollection m_materials;
+  MeshAnimations m_animations;
+  BoneIndicesCollection m_bonesIndices;
+  
+  std::unique_ptr<MeshNode> m_rootNode;
+  std::unique_ptr<MeshNode> m_bonesRootNode;
+  
+  mutable std::vector<MeshGroup const *> m_groupsCache;
 };
 
 extern void ForEachAttribute(uint32_t componentsMask,

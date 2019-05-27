@@ -532,8 +532,19 @@ void BaseMesh::GetBonesTransforms(int groupIndex, size_t animIndex, double timeS
   CalculateBonesTransform(animIndex, animTime, group, m_bonesRootNode, glm::mat4x4(), bonesTransforms);
 }
 
-bool BaseMesh::LoadMesh(std::string const & filename)
+bool BaseMesh::LoadMesh(std::string && filename)
 {
+  // Workaround for some CMake generated projects.
+  if (!Utils::IsPathExisted(filename))
+  {
+    filename = "../" + filename;
+    if (!Utils::IsPathExisted(filename))
+    {
+      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.", filename.c_str());
+      return false;
+    }
+  }
+
   using namespace Assimp;
   MeshLogGuard logGuard(filename);
 
@@ -542,6 +553,7 @@ bool BaseMesh::LoadMesh(std::string const & filename)
                                   aiProcess_JoinIdenticalVertices | aiProcess_Triangulate |
                                   aiProcess_ValidateDataStructure | aiProcess_SortByPType;
   aiScene const * scene = importer.ReadFile(filename, postProcessFlags);
+
   if (scene == nullptr)
   {
     Logger::ToLogWithFormat(Logger::Error, "Could not load mesh from '%s'.", filename.c_str());

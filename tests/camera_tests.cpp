@@ -27,7 +27,7 @@ TEST(FreeCamera, Smoke)
 {
   rf::FreeCamera camera;
   camera.Setup(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0, 1.0f, 1.0f));
-  camera.SetSpeed(1.0f);
+  camera.SetMoveSpeed(1.0f);
   camera.OnKeyButton(GLFW_KEY_W, true /* pressed */);
   camera.Update(1.0f /* in seconds */, 1024, 768);
   camera.OnKeyButton(GLFW_KEY_W, false /* pressed */);

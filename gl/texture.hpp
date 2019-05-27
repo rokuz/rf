@@ -11,14 +11,14 @@ public:
   Texture() = default;
   ~Texture();
 
-  bool Initialize(std::string const & fileName);
+  bool Initialize(std::string && fileName);
   bool InitializeWithData(GLint format, unsigned char const * buffer, size_t width, size_t height,
                           bool mipmaps = false, int pixelFormat = -1);
-  bool InitializeAsCubemap(std::string const & frontFilename, std::string const & backFilename,
-                           std::string const & leftFilename, std::string const & rightFilename,
-                           std::string const & topFilename, std::string const & bottomFilename,
+  bool InitializeAsCubemap(std::string && frontFileName, std::string && backFileName,
+                           std::string && leftFileName, std::string && rightFileName,
+                           std::string && topFileName, std::string && bottomFileName,
                            bool mipmaps = false);
-  bool InitializeAsArray(std::vector<std::string> const & filenames, bool mipmaps = true);
+  bool InitializeAsArray(std::vector<std::string> && filenames, bool mipmaps = true);
 
   bool IsLoaded() const { return m_isLoaded; }
 

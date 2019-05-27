@@ -69,11 +69,11 @@ void Mesh::Destroy()
   DestroyMesh();
 }
 
-bool Mesh::Initialize(std::string const & fileName)
+bool Mesh::Initialize(std::string && fileName)
 {
   Destroy();
 
-  if (!LoadMesh(fileName))
+  if (!LoadMesh(std::move(fileName)))
     return false;
 
   InitBuffers();
@@ -106,7 +106,7 @@ void Mesh::RenderGroup(int index, uint32_t instancesCount) const
   else
   {
     glDrawElementsInstanced(GL_TRIANGLES, group.m_indicesCount, GL_UNSIGNED_INT,
-                            (GLvoid const *)(group.m_startIndex * sizeof(unsigned int)),
+                            (GLvoid const *)(group.m_startIndex * sizeof(uint32_t)),
                             instancesCount);
   }
 }

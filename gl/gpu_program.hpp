@@ -24,7 +24,7 @@ public:
   GpuProgram();
   ~GpuProgram();
 
-  bool Initialize(std::initializer_list<std::string> sources, bool areFiles = true);
+  bool Initialize(std::initializer_list<std::string> && sources, bool areFiles = true);
   void Destroy();
   bool IsValid() const;
 	bool Use() const;
@@ -62,7 +62,7 @@ private:
   std::unordered_map<std::string, GLint> m_uniforms;
   std::vector<std::string> m_shaders;
 
-	bool SetShaderFromFile(std::string const & fileName);
+	bool SetShaderFromFile(std::string && fileName);
   bool CompileShader(ShaderType type, GLuint * shader);
   bool LinkProgram(GLuint prog);
 

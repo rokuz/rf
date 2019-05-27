@@ -59,10 +59,30 @@ if (APPLE)
   add_definitions(-DGL_SILENCE_DEPRECATION)
 endif()
 
-aux_source_directory(. SRC_LIST)
-aux_source_directory(./gl GL_SRC_LIST)
+set(SRC_LIST
+  base_mesh.cpp
+  base_mesh.hpp
+  camera.cpp
+  camera.hpp
+  common.hpp
+  free_camera.cpp
+  free_camera.hpp
+  gl/gpu_program.cpp
+  gl/gpu_program.hpp
+  gl/mesh.cpp
+  gl/mesh.hpp
+  gl/texture.cpp
+  gl/texture.hpp
+  logger.cpp
+  logger.hpp
+  mesh_generator.cpp
+  mesh_generator.hpp
+  rf.cpp
+  rf.hpp
+  window.cpp
+  window.hpp)
 
-add_library(${PROJECT_NAME} STATIC ${SRC_LIST} ${GL_SRC_LIST})
+add_library(${PROJECT_NAME} STATIC ${SRC_LIST})
 
 if (RF_BUILD_TESTS)
   add_subdirectory(3party/googletest)

@@ -58,6 +58,9 @@
 float constexpr kPi = static_cast<float>(3.14159265358979323846);
 float constexpr kEps = 1e-5f;
 
+constexpr float RadToDeg(float r) { return r * 180.0f / kPi; }
+constexpr float DegToRad(float d) { return d * kPi / 180.0f; }
+
 using ByteArray = std::vector<uint8_t>;
 
 #ifdef DEBUG

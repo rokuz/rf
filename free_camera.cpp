@@ -1,17 +1,19 @@
 #include "free_camera.hpp"
 
+#include "logger.hpp"
+
 namespace rf
 {
 void FreeCamera::Setup(glm::vec3 const & from, glm::vec3 const & to)
 {
   glm::vec3 dir = glm::normalize(to - from);
-  m_angles.x = acos(dir.y);
-  m_angles.y = acos(dir.x);
+  m_angles.x = RadToDeg(acos(dir.z));
+  m_angles.y = RadToDeg(atan2(dir.y, dir.x));
 
-  glm::quat q1(1.0f, 0.0f, 0.0f, 0.0f);
-  glm::rotate(q1, m_angles.x, glm::vec3(0.0f, 1.0f, 0.0f));
-  glm::quat q2(1.0f, 0.0f, 0.0f, 0.0f);
-  glm::rotate(q2, m_angles.y, glm::vec3(1.0f, 0.0f, 0.0f));
+  auto const q1 = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                              DegToRad(m_angles.x), glm::vec3(0.0f, 1.0f, 0.0f));
+  auto const q2 = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                              DegToRad(m_angles.y), glm::vec3(1.0f, 0.0f, 0.0f));
 
   m_position = from;
   m_orientation = q1 * q2;
@@ -84,20 +86,20 @@ void FreeCamera::Update(double elapsedTime, uint32_t screenWidth,
         float ay = atan2(h * (2.0f * delta.y / screenHeight), m_znear);
 
         glm::vec2 oldAngles = m_angles;
-        m_angles.x -= static_cast<float>(ax * 100.0 * m_updateTime);
-        m_angles.y += static_cast<float>(ay * 100.0 * m_updateTime);
+        m_angles.x -= static_cast<float>(ax * m_rotationSpeed * m_updateTime);
+        m_angles.y += static_cast<float>(ay * m_rotationSpeed * m_updateTime);
         if (m_angles.y > 89.9f)
           m_angles.y = 89.9f;
-        if (m_angles.y < -89.9)
+        if (m_angles.y < -89.9f)
           m_angles.y = -89.9f;
 
         glm::vec2 anglesDelta = m_angles - oldAngles;
         if (fabs(anglesDelta.x) > kEps || fabs(anglesDelta.y) > kEps)
         {
-          glm::quat q1(1.0f, 0.0f, 0.0f, 0.0f);
-          glm::rotate(q1, m_angles.x, glm::vec3(0.0f, 1.0f, 0.0f));
-          glm::quat q2(1.0f, 0.0f, 0.0f, 0.0f);
-          glm::rotate(q2, m_angles.y, glm::vec3(1.0f, 0.0f, 0.0f));
+          auto const q1 = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                                      DegToRad(m_angles.x), glm::vec3(0.0f, 1.0f, 0.0f));
+          auto const q2 = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                                      DegToRad(m_angles.y), glm::vec3(1.0f, 0.0f, 0.0f));
           m_orientation = q1 * q2;
           needUpdateView = true;
         }
@@ -111,28 +113,28 @@ void FreeCamera::Update(double elapsedTime, uint32_t screenWidth,
   if (m_moveForward)
   {
     glm::vec3 dir = m_orientation * glm::vec3(0.0f, 0.0f, 1.0f);
-    m_position += (dir * m_speed * static_cast<float>(elapsedTime));
+    m_position += (dir * m_moveSpeed * static_cast<float>(elapsedTime));
     needUpdateView = true;
   }
 
   if (m_moveBackward)
   {
     glm::vec3 dir = m_orientation * glm::vec3(0.0f, 0.0f, 1.0f);
-    m_position -= (dir * m_speed * static_cast<float>(elapsedTime));
+    m_position -= (dir * m_moveSpeed * static_cast<float>(elapsedTime));
     needUpdateView = true;
   }
 
   if (m_moveLeft)
   {
     glm::vec3 dir = m_orientation * glm::vec3(1.0f, 0.0f, 0.0f);
-    m_position += (dir * m_speed * static_cast<float>(elapsedTime));
+    m_position += (dir * m_moveSpeed * static_cast<float>(elapsedTime));
     needUpdateView = true;
   }
 
   if (m_moveRight)
   {
     glm::vec3 dir = m_orientation * glm::vec3(1.0f, 0.0f, 0.0f);
-    m_position -= (dir * m_speed * static_cast<float>(elapsedTime));
+    m_position -= (dir * m_moveSpeed * static_cast<float>(elapsedTime));
     needUpdateView = true;
   }
 

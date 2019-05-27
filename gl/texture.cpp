@@ -188,8 +188,19 @@ Texture::~Texture()
   Destroy();
 }
 
-bool Texture::Initialize(std::string const & fileName)
+bool Texture::Initialize(std::string && fileName)
 {
+  // Workaround for some CMake generated projects.
+  if (!Utils::IsPathExisted(fileName))
+  {
+    fileName = "../" + fileName;
+    if (!Utils::IsPathExisted(fileName))
+    {
+      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.", fileName.c_str());
+      return false;
+    }
+  }
+
   Destroy();
 
   stbi_set_flip_vertically_on_load(true);
@@ -248,23 +259,40 @@ bool Texture::InitializeWithData(GLint format, unsigned char const * buffer, siz
   return m_isLoaded;
 }
 
-bool Texture::InitializeAsCubemap(std::string const & frontFilename,
-                                  std::string const & backFilename,
-                                  std::string const & leftFilename,
-                                  std::string const & rightFilename,
-                                  std::string const & topFilename,
-                                  std::string const & bottomFilename,
+bool Texture::InitializeAsCubemap(std::string && frontFileName, std::string && backFileName,
+                                  std::string && leftFileName, std::string && rightFileName,
+                                  std::string && topFileName, std::string && bottomFileName,
                                   bool mipmaps)
 {
+  // Workaround for some CMake generated projects.
+  if (!Utils::IsPathExisted(frontFileName))
+  {
+    frontFileName = "../" + frontFileName;
+    if (!Utils::IsPathExisted(frontFileName))
+    {
+      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.", frontFileName.c_str());
+      return false;
+    }
+    else
+    {
+      backFileName = "../" + backFileName;
+      leftFileName = "../" + leftFileName;
+      rightFileName = "../" + rightFileName;
+      topFileName = "../" + topFileName;
+      bottomFileName = "../" + bottomFileName;
+    }
+  }
+
   Destroy();
 
   stbi_set_flip_vertically_on_load(true);
 
   size_t constexpr kSidesCount = 6;
-  std::string filenames[kSidesCount] = {rightFilename,  leftFilename,  topFilename,
-                                        bottomFilename, frontFilename, backFilename};
+  std::string filenames[kSidesCount] = {std::move(rightFileName), std::move(leftFileName),
+                                        std::move(topFileName), std::move(bottomFileName),
+                                        std::move(frontFileName), std::move(backFileName)};
   ImageInfo info[kSidesCount];
-  auto cleanFunc = [&info, kSidesCount]() {
+  auto cleanFunc = [&info]() {
     for (size_t i = 0; i < kSidesCount; i++)
     {
       if (info[i].imageData != nullptr)
@@ -285,8 +313,7 @@ bool Texture::InitializeAsCubemap(std::string const & frontFilename,
     if (i > 0 && !AreEqual(info[i], info[i - 1]))
     {
       Logger::ToLogWithFormat(Logger::Error,
-          "Could not create a cubemap, files have different properties (width, height, "
-          "components).");
+        "Could not create a cubemap, files have different properties (width, height, components).");
       cleanFunc();
       return false;
     }
@@ -302,8 +329,8 @@ bool Texture::InitializeAsCubemap(std::string const & frontFilename,
   m_pixelFormat = FindPixelFormat(m_format);
   if (m_pixelFormat < 0)
   {
-     Logger::ToLogWithFormat(Logger::Error,
-       "Could not create a cubemap, pixel format is unsupported.");
+    Logger::ToLogWithFormat(Logger::Error,
+      "Could not create a cubemap, pixel format is unsupported.");
     cleanFunc();
     return false;
   }
@@ -337,9 +364,27 @@ bool Texture::InitializeAsCubemap(std::string const & frontFilename,
   return m_isLoaded;
 }
 
-bool Texture::InitializeAsArray(std::vector<std::string> const & filenames, bool mipmaps)
+bool Texture::InitializeAsArray(std::vector<std::string> && filenames, bool mipmaps)
 {
   ASSERT(filenames.size() > 0, "");
+
+  // Workaround for some CMake generated projects.
+  if (!Utils::IsPathExisted(filenames.front()))
+  {
+    filenames.front() = "../" + filenames.front();
+    if (!Utils::IsPathExisted(filenames.front()))
+    {
+      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.",
+                              filenames.front().c_str());
+      return false;
+    }
+    else
+    {
+      for (size_t i = 1; i < filenames.size(); ++i)
+        filenames[i] = "../" + filenames[i];
+    }
+  }
+
   Destroy();
 
   stbi_set_flip_vertically_on_load(true);
@@ -369,8 +414,7 @@ bool Texture::InitializeAsArray(std::vector<std::string> const & filenames, bool
     if (i > 0 && !AreEqual(info[i], info[i - 1]))
     {
       Logger::ToLogWithFormat(Logger::Error,
-          "Could not create an array, files have different properties (width, height, "
-          "components).");
+        "Could not create an array, files have different properties (width, height, components).");
       cleanFunc();
       return false;
     }

@@ -12,51 +12,61 @@ namespace
 {
 char const * const kLogFileName = "log.txt";
 std::ofstream g_logFile;
-std::mutex g_logMutex;
+}  // namespace
 
 std::string SeverityToString(Logger::Severity s)
 {
   switch (s)
   {
     case Logger::Severity::Error:
-      return "Error: ";
+      return "Error";
     case Logger::Severity::Warning:
-      return "Warning: ";
+      return "Warning";
     case Logger::Severity::Info:
-      return "Info: ";
+      return "Info";
   }
   CHECK(false, "Unsupported severity type");
   return {};
 }
-}  // namespace
 
-unsigned char Logger::outputFlags = static_cast<unsigned char>(Logger::OutputFlags::Console);
+unsigned char Logger::m_outputFlags = static_cast<unsigned char>(Logger::OutputFlags::Console);
+std::mutex Logger::m_mutex;
 
 void Logger::ToLog(Severity severity, std::string const & message)
 {
-  std::lock_guard<std::mutex> lock(g_logMutex);
-  ToLogImpl(severity, message);
+  std::lock_guard<std::mutex> lock(m_mutex);
+  ToLogImpl(SeverityToString(severity), ": " /* endLine */);
+  ToLogImpl(message, "\n" /* endLine */);
 }
 
-void Logger::ToLogImpl(Severity severity, std::string const & message)
+void Logger::ToLogImpl(std::string const & message, std::string const & endLine)
 {
-  if ((outputFlags & static_cast<unsigned char>(OutputFlags::Console)) != 0)
+  if ((m_outputFlags & static_cast<unsigned char>(OutputFlags::Console)) != 0)
   {
-    std::cout << SeverityToString(severity) << message << std::endl;
+    std::cout << message;
+    if (!endLine.empty())
+      std::cout << endLine;
 #ifdef WINDOWS_PLATFORM
-    OutputDebugStringA((SeverityToString(severity) + message + "\n").c_str());
+    OutputDebugStringA((SeverityToString(severity) + message).c_str());
+    if (!endLine.empty())
+      OutputDebugStringA(endLine.c_str());
 #endif
   }
-  if ((outputFlags & static_cast<unsigned char>(OutputFlags::File)) != 0)
+  if ((m_outputFlags & static_cast<unsigned char>(OutputFlags::File)) != 0)
   {
     if (g_logFile.is_open())
-      g_logFile << SeverityToString(severity) << message << std::endl;
+    {
+      g_logFile << message;
+      if (!endLine.empty())
+        g_logFile << endLine;
+    }
   }
 }
 
 void Logger::ToLogWithFormat(Severity severity, char const * format, ...)
 {
-  std::lock_guard<std::mutex> lock(g_logMutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
+  ToLogImpl(SeverityToString(severity), ": " /* endLine */);
   std::string fmt(format);
   auto const n = std::count(fmt.begin(), fmt.end(), '%');
   if (n > 0)
@@ -68,30 +78,30 @@ void Logger::ToLogWithFormat(Severity severity, char const * format, ...)
     vsnprintf(buf, kSize, format, args);
     va_end(args);
 
-    ToLogImpl(severity, buf);
+    ToLogImpl(buf, "\n" /* endLine */);
   }
   else
   {
-    ToLogImpl(severity, format);
+    ToLogImpl(format, "\n" /* endLine */);
   }
 }
 
 void Logger::SetOutputFlags(unsigned char flags)
 {
-  outputFlags |= flags;
+  m_outputFlags |= flags;
 }
 
 void Logger::Start(unsigned char flags)
 {
-  std::lock_guard<std::mutex> lock(g_logMutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   SetOutputFlags(flags);
-  if ((outputFlags & (unsigned char)OutputFlags::File) != 0)
+  if ((m_outputFlags & (unsigned char)OutputFlags::File) != 0)
     g_logFile.open(kLogFileName);
 }
 
 void Logger::Finish()
 {
-  std::lock_guard<std::mutex> lock(g_logMutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   if (g_logFile.is_open())
   {
     g_logFile.flush();
@@ -101,7 +111,7 @@ void Logger::Finish()
 
 void Logger::Flush()
 {
-  std::lock_guard<std::mutex> lock(g_logMutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   if (g_logFile.is_open())
     g_logFile.flush();
 }

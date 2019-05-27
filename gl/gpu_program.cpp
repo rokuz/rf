@@ -52,8 +52,19 @@ GpuProgram::~GpuProgram()
   Destroy();
 }
 
-bool GpuProgram::SetShaderFromFile(std::string const & fileName)
+bool GpuProgram::SetShaderFromFile(std::string && fileName)
 {
+  // Workaround for some CMake generated projects.
+  if (!Utils::IsPathExisted(fileName))
+  {
+    fileName = "../" + fileName;
+    if (!Utils::IsPathExisted(fileName))
+    {
+      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.", fileName.c_str());
+      return false;
+    }
+  }
+
   auto const shaderType = GetTypeByExt(Utils::GetExtensions(fileName));
   if (shaderType == ShaderType::Count)
   {
@@ -64,6 +75,7 @@ bool GpuProgram::SetShaderFromFile(std::string const & fileName)
 
   std::string sourceStr;
   Utils::ReadFileToString(fileName, sourceStr);
+
   if (sourceStr.empty())
   {
     Logger::ToLogWithFormat(Logger::Error, "Failed to load shader '%s'.", fileName.c_str());
@@ -74,7 +86,7 @@ bool GpuProgram::SetShaderFromFile(std::string const & fileName)
   return true;
 }
 
-bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool areFiles)
+bool GpuProgram::Initialize(std::initializer_list<std::string> && shaders, bool areFiles)
 {
   if (!areFiles && shaders.size() != static_cast<size_t>(ShaderType::Count))
   {
@@ -89,7 +101,7 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
   std::vector<GLuint> compiledShaders;
   compiledShaders.reserve(shaders.size());
   size_t shaderIndex = 0;
-  for (auto const & s : shaders)
+  for (auto s : shaders)
   {
     if (s.empty())
     {
@@ -99,7 +111,7 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
 
     if (areFiles)
     {
-      if (!SetShaderFromFile(s))
+      if (!SetShaderFromFile(std::move(s)))
       {
         Destroy();
         return false;
@@ -107,7 +119,7 @@ bool GpuProgram::Initialize(std::initializer_list<std::string> shaders, bool are
     }
     else
     {
-      m_shaders[static_cast<size_t>(shaderIndex)] = s;
+      m_shaders[static_cast<size_t>(shaderIndex)] = std::move(s);
     }
     shaderIndex++;
   }

@@ -17,9 +17,14 @@ public:
 
   void Update(double elapsedTime, uint32_t screenWidth, uint32_t screenHeight);
 
-  void SetSpeed(float speed)
+  void SetMoveSpeed(float speed)
   {
-    m_speed = speed;
+    m_moveSpeed = speed;
+  }
+
+  void SetRotationSpeed(float speed)
+  {
+    m_rotationSpeed = speed;
   }
 
 private:
@@ -28,7 +33,8 @@ private:
   bool m_moveLeft = false;
   bool m_moveRight = false;
   bool m_rotationMode = false;
-  float m_speed = 50.0f;
+  float m_moveSpeed = 10.0f;
+  float m_rotationSpeed = 1000.0f;
   glm::vec2 m_lastMousePosition;
 	glm::vec2 m_currentMousePosition;
 	glm::vec2 m_angles;

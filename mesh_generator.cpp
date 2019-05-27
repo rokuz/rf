@@ -231,7 +231,7 @@ bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
   bool failed = false;
   ForEachAttributeWithCheck(
       componentsMask,
-      [&meshGroup, &failed, &positions, &indices, &uv](MeshVertexAttribute attr) {
+      [&meshGroup, &failed, &positions, &uv](MeshVertexAttribute attr) {
         if (attr == MeshVertexAttribute::Position)
         {
           for (size_t i = 0; i < positions.size(); i++)
@@ -314,7 +314,7 @@ bool MeshGenerator::GeneratePlane(float width, float height, uint32_t components
   bool failed = false;
   ForEachAttributeWithCheck(
       componentsMask,
-      [&meshGroup, &failed, &positions, &indices, &uv](MeshVertexAttribute attr) {
+      [&meshGroup, &failed, &positions, &uv](MeshVertexAttribute attr) {
         if (attr == MeshVertexAttribute::Position)
         {
           for (auto const & p : positions)

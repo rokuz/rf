@@ -29,22 +29,33 @@ void MouseCallback(GLFWwindow * window, int button, int action, int)
   if (!g_window)
     return;
 
-  double xpos, ypos;
-  glfwGetCursorPos(window, &xpos, &ypos);
   if (g_window->m_onMouseButtonHandler)
   {
-    g_window->m_onMouseButtonHandler(static_cast<float>(xpos), static_cast<float>(ypos),
+    float sw, sh;
+    glfwGetWindowContentScale(window, &sw, &sh);
+
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    g_window->m_onMouseButtonHandler(static_cast<float>(xpos * sw),
+                                     static_cast<float>(ypos * sh),
                                      button, action != GLFW_RELEASE);
   }
 }
 
-void MouseMoveCallback(GLFWwindow *, double xpos, double ypos)
+void MouseMoveCallback(GLFWwindow * window, double xpos, double ypos)
 {
   if (!g_window)
     return;
 
   if (g_window->m_onMouseMoveHandler)
-    g_window->m_onMouseMoveHandler(static_cast<float>(xpos), static_cast<float>(ypos));
+  {
+    float sw, sh;
+    glfwGetWindowContentScale(window, &sw, &sh);
+
+    g_window->m_onMouseMoveHandler(static_cast<float>(xpos * sw),
+                                   static_cast<float>(ypos * sh));
+  }
 }
 
 Window::Window()
@@ -64,9 +75,6 @@ bool Window::InitializeForOpenGL(uint32_t screenWidth, uint32_t screenHeight,
                                  uint8_t openGLMajorVersion,
                                  uint8_t openGLMinorVersion)
 {
-  m_screenWidth = screenWidth;
-  m_screenHeight = screenHeight;
-
   glfwSetErrorCallback([](int error, char const * description)
   {
     Logger::ToLogWithFormat(Logger::Error, "GLFW: (%d): %s", error, description);
@@ -92,6 +100,14 @@ bool Window::InitializeForOpenGL(uint32_t screenWidth, uint32_t screenHeight,
     return false;
   }
 
+  int w, h;
+  float sw, sh;
+  glfwGetWindowSize(m_window, &w, &h);
+  glfwGetWindowContentScale(m_window, &sw, &sh);
+
+  m_screenWidth = static_cast<uint32_t>(sw * w);
+  m_screenHeight = static_cast<uint32_t>(sh * h);
+
   glfwSetKeyCallback(m_window, KeyCallback);
   glfwSetMouseButtonCallback(m_window, MouseCallback);
   glfwSetCursorPosCallback(m_window, MouseMoveCallback);
@@ -114,6 +130,15 @@ bool Window::InitializeForOpenGL(uint32_t screenWidth, uint32_t screenHeight,
     return false;
   }
 #endif
+
+  if (sw != 1.0f || sh != 1.0f)
+  {
+    Logger::ToLogWithFormat(Logger::Info,
+      "The operation system rescales window with scale factors = (%.1f; %.1f).", sw, sh);
+  }
+
+  Logger::ToLogWithFormat(Logger::Info, "OpenGL %d.%d context created with framebuffer size %dx%d.",
+    openGLMajorVersion, openGLMinorVersion, m_screenWidth, m_screenHeight);
 
   return true;
 }

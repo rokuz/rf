@@ -23,7 +23,7 @@ public:
   Mesh() = default;
   ~Mesh() override;
 
-  bool Initialize(std::string const & fileName);
+  bool Initialize(std::string && fileName);
   bool InitializeAsSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
   bool InitializeAsPlane(float width, float height, uint32_t widthSegments = 1,
                          uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
