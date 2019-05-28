@@ -46,6 +46,7 @@
 #define GLM_FORCE_CTOR_INIT
 #include <glm/glm.hpp>
 #include <glm/gtx/compatibility.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include "glm-aabb/AABB.hpp"
@@ -55,6 +56,8 @@
 #endif
 #include <GLFW/glfw3.h>
 
+#include "logger.hpp"
+
 float constexpr kPi = static_cast<float>(3.14159265358979323846);
 float constexpr kEps = 1e-5f;
 
@@ -63,9 +66,17 @@ constexpr float DegToRad(float d) { return d * kPi / 180.0f; }
 
 using ByteArray = std::vector<uint8_t>;
 
+#define CHECK(condition, s) \
+{ \
+  if (!(condition)) \
+  { \
+    rf::Logger::ToLog(rf::Logger::Error, "Assertion failed! [", #condition, "]", s); \
+    std::abort(); \
+  } \
+}
+
 #ifdef DEBUG
 #define ASSERT() {}
 #else
-#define ASSERT(condition, s) { assert((condition) && s); }
+#define ASSERT(condition, s) CHECK(condition, s)
 #endif
-#define CHECK(condition, s) { if ((condition) && s) std::abort(); }

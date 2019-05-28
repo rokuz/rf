@@ -5,30 +5,38 @@ namespace rf::gl
 {
 namespace
 {
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-
-void CreateVertexArray(uint32_t componentsMask)
+uint32_t BindAttributes(uint32_t startIndex, uint32_t componentsMask)
 {
   uint32_t const vertexSize = GetVertexSizeInBytes(componentsMask);
   uint32_t offset = 0;
-  uint32_t index = 0;
+  uint32_t index = startIndex;
   ForEachAttribute(componentsMask, [&offset, &index, vertexSize](MeshVertexAttribute attr)
   {
-    glVertexAttribPointer(index, GetAttributeElementsCount(attr), GL_FLOAT, GL_FALSE, vertexSize,
-                          BUFFER_OFFSET(offset));
     glEnableVertexAttribArray(index);
+    switch (GetAttributeUnderlyingType(attr))
+    {
+      case MeshAttributeUnderlyingType::Float:
+        glVertexAttribPointer(index, GetAttributeElementsCount(attr), GL_FLOAT, GL_FALSE, vertexSize,
+                              reinterpret_cast<void const *>(offset));
+        break;
+      case MeshAttributeUnderlyingType::UnsignedInteger:
+        glVertexAttribIPointer(index, GetAttributeElementsCount(attr), GL_UNSIGNED_INT, vertexSize,
+                               reinterpret_cast<void const*>(offset));
+        break;
+      default:
+        CHECK(false, ("Unknown underlying type."));
+    }
+
     offset += GetAttributeSizeInBytes(attr);
     index++;
   });
+  return index;
 }
 }  // namespace
 
-VertexArray::VertexArray(uint32_t componentsMask)
+VertexArray::VertexArray()
 {
   glGenVertexArrays(1, &m_vertexArray);
-  glBindVertexArray(m_vertexArray);
-  CreateVertexArray(componentsMask);
-  glBindVertexArray(0);
 }
 
 VertexArray::~VertexArray()
@@ -40,9 +48,19 @@ VertexArray::~VertexArray()
   }
 }
 
+void VertexArray::BindVertexAttributes(uint32_t componentsMask)
+{
+  m_lastStartIndex = BindAttributes(m_lastStartIndex, componentsMask);
+}
+
 void VertexArray::Bind()
 {
   glBindVertexArray(m_vertexArray);
+}
+
+void VertexArray::Unbind()
+{
+  glBindVertexArray(0);
 }
 
 Mesh::~Mesh()
@@ -56,6 +74,12 @@ void Mesh::Destroy()
   {
     glDeleteBuffers(1, &m_vertexBuffer);
     m_vertexBuffer = 0;
+  }
+
+  if (m_bonesIndicesBuffer != 0)
+  {
+    glDeleteBuffers(1, &m_bonesIndicesBuffer);
+    m_bonesIndicesBuffer = 0;
   }
 
   if (m_indexBuffer != 0)
@@ -96,8 +120,6 @@ void Mesh::RenderGroup(int index, uint32_t instancesCount) const
     return;
 
   m_vertexArray->Bind();
-  glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
   if (instancesCount == 1)
   {
     glDrawElements(GL_TRIANGLES, group.m_indicesCount, GL_UNSIGNED_INT,
@@ -148,28 +170,49 @@ bool Mesh::InitializeAsPlane(float width, float height, uint32_t widthSegments,
 
 void Mesh::InitBuffers()
 {
+  uint32_t componentsMask = m_componentsMask;
+  if (m_componentsMask & MeshVertexAttribute::BoneIndices)
+    componentsMask &= (~MeshVertexAttribute::BoneIndices);
+
+  m_vertexArray = std::make_unique<VertexArray>();
+  m_vertexArray->Bind();
+
   uint32_t vbOffset = 0;
   uint32_t ibOffset = 0;
-  uint32_t const vertexSize = GetVertexSizeInBytes(m_componentsMask);
-  std::vector<uint8_t> vb(vertexSize * m_verticesCount, 0);
+  std::vector<uint8_t> vb(GetVertexSizeInBytes(componentsMask) * m_verticesCount, 0);
   std::vector<uint32_t> ib(m_indicesCount, 0);
-  FillGpuBuffers(m_rootNode, vb.data(), ib.data(), vbOffset, ibOffset, m_componentsMask);
+  FillGpuBuffers(m_rootNode, vb.data(), ib.data(), vbOffset, ibOffset,
+                 true /* fillIndexBuffer */, componentsMask);
 
-  // Fill gl buffers.
+  // Fill OpenGL buffers.
   glGenBuffers(1, &m_vertexBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+  glBufferData(GL_ARRAY_BUFFER, vb.size(), vb.data(), GL_STATIC_DRAW);
+  m_vertexArray->BindVertexAttributes(componentsMask);
+
+  if (m_componentsMask & MeshVertexAttribute::BoneIndices)
   {
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-    m_vertexArray = std::make_unique<VertexArray>(m_componentsMask);
-    glBufferData(GL_ARRAY_BUFFER, vb.size(), vb.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    componentsMask = MeshVertexAttribute::BoneIndices;
+    vbOffset = 0;
+    ibOffset = 0;
+    std::vector<uint8_t> bi(GetVertexSizeInBytes(componentsMask) * m_verticesCount, 0);
+    FillGpuBuffers(m_rootNode, bi.data(), nullptr, vbOffset, ibOffset,
+                   false /* fillIndexBuffer */, componentsMask);
+
+    glGenBuffers(1, &m_bonesIndicesBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_bonesIndicesBuffer);
+    glBufferData(GL_ARRAY_BUFFER, bi.size(), bi.data(), GL_STATIC_DRAW);
+    m_vertexArray->BindVertexAttributes(componentsMask);
   }
 
   glGenBuffers(1, &m_indexBuffer);
-  {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ib.size() * sizeof(uint32_t), ib.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  }
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, ib.size() * sizeof(uint32_t), ib.data(), GL_STATIC_DRAW);
+
+  m_vertexArray->Unbind();
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 SinglePointMesh::SinglePointMesh()
@@ -183,17 +226,20 @@ SinglePointMesh::~SinglePointMesh()
 
 void SinglePointMesh::Initialize()
 {
+  m_vertexArray = std::make_unique<VertexArray>();
+  m_vertexArray->Bind();
   glGenBuffers(1, &m_vertexBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-  m_vertexArray = std::make_unique<VertexArray>(MeshVertexAttribute::Position);
-  glBufferData(GL_ARRAY_BUFFER, GetAttributeSizeInBytes(MeshVertexAttribute::Position), 0, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, GetAttributeSizeInBytes(MeshVertexAttribute::Position),
+               0, GL_STATIC_DRAW);
+  m_vertexArray->BindVertexAttributes(MeshVertexAttribute::Position);
+  m_vertexArray->Unbind();
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void SinglePointMesh::Render()
 {
   m_vertexArray->Bind();
-  glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
   glDrawArrays(GL_POINTS, 0, 1);
 }
 

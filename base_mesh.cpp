@@ -57,7 +57,19 @@ uint32_t GetAttributeElementsCount(MeshVertexAttribute attr)
 
 uint32_t GetAttributeSizeInBytes(MeshVertexAttribute attr)
 {
-  return GetAttributeElementsCount(attr) * sizeof(float);
+  uint32_t typeSize = 0;
+  switch (GetAttributeUnderlyingType(attr))
+  {
+    case MeshAttributeUnderlyingType::Float:
+      typeSize = sizeof(float);
+      break;
+    case MeshAttributeUnderlyingType::UnsignedInteger:
+      typeSize = sizeof(uint32_t);
+      break;
+    default:
+      CHECK(false, ("Unknown underlying type."));
+  }
+  return GetAttributeElementsCount(attr) * typeSize;
 }
 
 uint32_t GetAttributeOffsetInBytes(uint32_t componentsMask, MeshVertexAttribute attr)
@@ -73,6 +85,14 @@ uint32_t GetAttributeOffsetInBytes(uint32_t componentsMask, MeshVertexAttribute 
   return offset;
 }
 
+MeshAttributeUnderlyingType GetAttributeUnderlyingType(MeshVertexAttribute attr)
+{
+  if (attr == BoneIndices)
+    return MeshAttributeUnderlyingType::UnsignedInteger;
+
+  return MeshAttributeUnderlyingType::Float;
+}
+
 uint32_t GetVertexSizeInBytes(uint32_t componentsMask)
 {
   uint32_t size = 0;
@@ -83,9 +103,14 @@ uint32_t GetVertexSizeInBytes(uint32_t componentsMask)
 
 namespace
 {
-struct BoneData
+struct BoneWeightsData
 {
-  float data[kMaxBonesPerVertex] = {0.0f, 0.0f, 0.0f, 0.0f};
+  float m_data[kMaxBonesPerVertex] = {0.0f, 0.0f, 0.0f, 0.0f};
+};
+
+struct BoneIndicesData
+{
+  uint32_t m_data[kMaxBonesPerVertex] = {0, 0, 0, 0};
 };
 
 class MeshLogStream : public Assimp::LogStream
@@ -169,7 +194,7 @@ void CopyVertexBufferPartially(BaseMesh::MeshGroup & group, MeshVertexAttribute 
   uint32_t offset = 0;
   for (uint32_t i = 0; i < numVertices; i++)
   {
-    memcpy(buffer.data() + offset, data + i, attrSize);
+    memcpy(buffer.data() + offset, data, attrSize);
     offset += attrSize;
   }
 }
@@ -209,8 +234,8 @@ void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * sc
     if (mesh->HasBones())
     {
       std::vector<uint8_t> bonesUsage(numVertices, 0);
-      std::vector<BoneData> boneWeights(numVertices);
-      std::vector<BoneData> boneIndices(numVertices);
+      std::vector<BoneWeightsData> boneWeights(numVertices);
+      std::vector<BoneIndicesData> boneIndices(numVertices);
       for (uint32_t i = 0; i < mesh->mNumBones; i++)
       {
         aiBone * bone = mesh->mBones[i];
@@ -246,8 +271,8 @@ void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * sc
           }
           bonesUsage[vertexId]++;
 
-          boneWeights[vertexId].data[b] = bone->mWeights[weightIndex].mWeight;
-          boneIndices[vertexId].data[b] = static_cast<float>(boneIndex);
+          boneWeights[vertexId].m_data[b] = bone->mWeights[weightIndex].mWeight;
+          boneIndices[vertexId].m_data[b] = boneIndex;
         }
       }
 
@@ -307,23 +332,22 @@ void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * sc
 glm::mat4x4 CalculateTransform(int index, std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                                glm::mat4x4 const & m, bool & found)
 {
-  glm::mat4x4 t = meshNode->m_transform * m;
-  for (size_t i = 0; i < meshNode->m_groups.size(); i++)
+  glm::mat4x4 const t = m * meshNode->m_transform;
+  for (auto const & g : meshNode->m_groups)
   {
-    if (meshNode->m_groups[i].m_groupIndex == index)
+    if (g.m_groupIndex == index)
     {
       found = true;
       return t;
     }
   }
 
-  for (size_t i = 0; i < meshNode->m_children.size(); i++)
+  for (auto const & c : meshNode->m_children)
   {
-    glm::mat4x4 r = CalculateTransform(index, meshNode->m_children[i], t, found);
+    glm::mat4x4 const r = CalculateTransform(index, c, t, found);
     if (found)
       return r;
   }
-
   return t;
 }
 
@@ -389,18 +413,34 @@ glm::mat4x4 CalculateBoneAnimation(BoneAnimation const & boneAnim, double animTi
   return glm::scale(glm::translate(glm::mat4x4(rot), pos), sc);
 }
 
-bool FindBonesInHierarchy(std::unique_ptr<BaseMesh::MeshNode> & node, BoneIndicesCollection const & bonesIndices)
+bool FindBonesInHierarchy(std::unique_ptr<BaseMesh::MeshNode> const & node,
+                          BoneIndicesCollection const & bonesIndices)
 {
   if (bonesIndices.find(node->m_name) != bonesIndices.end())
     return true;
 
-  for (auto it = node->m_children.begin(); it != node->m_children.end(); ++it)
+  for (auto const & c : node->m_children)
   {
-    if (FindBonesInHierarchy(*it, bonesIndices))
+    if (FindBonesInHierarchy(c, bonesIndices))
       return true;
   }
-
   return false;
+}
+
+std::string CheckTexturePath(std::string const & meshPath, std::string texturePath)
+{
+  auto const p = Utils::GetPath(meshPath);
+  texturePath = p + texturePath;
+
+  if (Utils::IsPathExisted(texturePath))
+    return texturePath;
+
+  auto const fn = Utils::GetFilename(texturePath);
+  texturePath = p + fn;
+  if (!Utils::IsPathExisted(texturePath))
+    return {};
+
+  return texturePath;
 }
 }  // namespace
 
@@ -468,16 +508,14 @@ size_t BaseMesh::GetAnimationsCount() const
 glm::mat4x4 BaseMesh::FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime,
                                         bool & found)
 {
-  for (size_t i = 0; i < m_animations[animIndex]->m_boneAnimations.size(); i++)
+  for (auto const & boneAnim : m_animations[animIndex]->m_boneAnimations)
   {
-    BoneAnimation & boneAnim = m_animations[animIndex]->m_boneAnimations[i];
     if (boneAnim.m_boneIndex == boneIndex)
     {
       found = true;
       return CalculateBoneAnimation(boneAnim, animTime);
     }
   }
-
   found = false;
   return glm::mat4x4();
 }
@@ -487,36 +525,32 @@ void BaseMesh::CalculateBonesTransform(size_t animIndex, double animTime, BaseMe
                                        glm::mat4x4 const & parentTransform,
                                        std::vector<glm::mat4x4> & bonesTransforms)
 {
-  glm::mat4x4 t = meshNode->m_transform * parentTransform;
+  glm::mat4x4 t = parentTransform * meshNode->m_transform;
   auto it = m_bonesIndices.find(meshNode->m_name);
   if (it != m_bonesIndices.end())
   {
     bool found = false;
     glm::mat4x4 boneTransform = FindBoneAnimation(it->second, animIndex, animTime, found);
     if (found)
-      t = boneTransform * parentTransform;
+      t = parentTransform * boneTransform;
 
-    auto boneOffsetIt = group.m_boneOffsets.find(it->second);
+    auto const boneOffsetIt = group.m_boneOffsets.find(it->second);
     if (boneOffsetIt != group.m_boneOffsets.end())
-    {
-      bonesTransforms[it->second] = boneOffsetIt->second * t;
-    }
+      bonesTransforms[it->second] = t * boneOffsetIt->second;
   }
 
-  for (size_t i = 0; i < meshNode->m_children.size(); i++)
-  {
-    CalculateBonesTransform(animIndex, animTime, group, meshNode->m_children[i], t,
-                            bonesTransforms);
-  }
+  for (auto const & c : meshNode->m_children)
+    CalculateBonesTransform(animIndex, animTime, group, c, t, bonesTransforms);
 }
 
 void BaseMesh::GetBonesTransforms(int groupIndex, size_t animIndex, double timeSinceStart, bool cycled,
                                   std::vector<glm::mat4x4> & bonesTransforms)
 {
-  if (bonesTransforms.size() < kMaxBonesNumber)
+  if (bonesTransforms.size() != kMaxBonesNumber)
     bonesTransforms.resize(kMaxBonesNumber);
 
-  memset(bonesTransforms.data(), 0, sizeof(glm::mat4x4) * kMaxBonesNumber);
+  for (auto & bt : bonesTransforms)
+    bt = glm::mat4x4();
 
   if (animIndex >= m_animations.size() || m_bonesRootNode == nullptr)
     return;
@@ -525,11 +559,10 @@ void BaseMesh::GetBonesTransforms(int groupIndex, size_t animIndex, double timeS
   if (group.m_groupIndex < 0)
     return;
 
-  double timeInTicks = m_animations[animIndex]->m_ticksPerSecond * timeSinceStart;
-  double animTime = cycled ? std::fmod(timeInTicks, m_animations[animIndex]->m_durationInTicks)
-                           : std::min(timeInTicks, m_animations[animIndex]->m_durationInTicks);
-
-  CalculateBonesTransform(animIndex, animTime, group, m_bonesRootNode, glm::mat4x4(), bonesTransforms);
+  double const timeInTicks = m_animations[animIndex]->m_ticksPerSecond * timeSinceStart;
+  double const animTime = cycled ? std::fmod(timeInTicks, m_animations[animIndex]->m_durationInTicks)
+                                 : std::min(timeInTicks, m_animations[animIndex]->m_durationInTicks);
+  CalculateBonesTransform(animIndex, 0.0, group, m_bonesRootNode, glm::mat4x4(), bonesTransforms);
 }
 
 bool BaseMesh::LoadMesh(std::string && filename)
@@ -567,26 +600,26 @@ bool BaseMesh::LoadMesh(std::string && filename)
     aiMaterial * material = scene->mMaterials[i];
     aiString diffuseName;
     if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuseName) == AI_SUCCESS)
-      mat->diffuseTexture = diffuseName.C_Str();
+      mat->m_diffuseTexture = CheckTexturePath(filename, diffuseName.C_Str());
     aiString normalsName;
     if (material->GetTexture(aiTextureType_NORMALS, 0, &normalsName) == AI_SUCCESS)
-      mat->normalsTexture = normalsName.C_Str();
+      mat->m_normalsTexture = CheckTexturePath(filename, normalsName.C_Str());
     aiString specularName;
     if (material->GetTexture(aiTextureType_SPECULAR, 0, &specularName) == AI_SUCCESS)
-      mat->specularTexture = specularName.C_Str();
+      mat->m_specularTexture = CheckTexturePath(filename, specularName.C_Str());
 
     aiColor3D diffuseColor(0.0f, 0.0f, 0.0f);
     if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor) == AI_SUCCESS)
-      mat->diffuseColor = MakeColor(diffuseColor);
+      mat->m_diffuseColor = MakeColor(diffuseColor);
     aiColor3D ambientColor(0.0f, 0.0f, 0.0f);
     if (material->Get(AI_MATKEY_COLOR_AMBIENT, ambientColor) == AI_SUCCESS)
-      mat->ambientColor = MakeColor(ambientColor);
+      mat->m_ambientColor = MakeColor(ambientColor);
     aiColor3D specularColor(0.0f, 0.0f, 0.0f);
     if (material->Get(AI_MATKEY_COLOR_SPECULAR, specularColor) == AI_SUCCESS)
-      mat->specularColor = MakeColor(specularColor);
+      mat->m_specularColor = MakeColor(specularColor);
 
-    if (mat->isValid())
-      m_materials.insert(make_pair(i, mat));
+    if (mat->IsValid())
+      m_materials.insert(std::make_pair(i, mat));
   }
 
   // Load mesh nodes.
@@ -722,10 +755,10 @@ void BaseMesh::DestroyMesh()
   m_isLoaded = false;
 }
 
-void BaseMesh::FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> & meshNode,
+void BaseMesh::FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                               uint8_t * vbPtr, uint32_t * ibPtr,
                               uint32_t & vbOffset, uint32_t & ibOffset,
-                              uint32_t componentsMask)
+                              bool fillIndexBuffer, uint32_t componentsMask)
 {
   if (!meshNode->m_groups.empty())
   {
@@ -746,14 +779,15 @@ void BaseMesh::FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> & meshNode,
             memcpy(ptr + j * vertexSize + offset, vb.data() + j * attrSize, attrSize);
         }
       });
-      group.m_vertexBuffers.clear();
 
       // Fill index buffer.
-      for (uint32_t j = 0; j < group.m_indicesCount; j++)
-        group.m_indexBuffer[j] += (vbOffset / vertexSize);
-      memcpy(ibPtr + ibOffset, group.m_indexBuffer.data(), group.m_indicesCount * sizeof(uint32_t));
-      group.m_indexBuffer.clear();
-      group.m_startIndex = ibOffset;
+      if (fillIndexBuffer)
+      {
+        for (uint32_t j = 0; j < group.m_indicesCount; j++)
+          group.m_indexBuffer[j] += (vbOffset / vertexSize);
+        memcpy(ibPtr + ibOffset, group.m_indexBuffer.data(), group.m_indicesCount * sizeof(uint32_t));
+        group.m_startIndex = ibOffset;
+      }
 
       ibOffset += group.m_indicesCount;
       vbOffset += (group.m_verticesCount * vertexSize);
@@ -761,7 +795,7 @@ void BaseMesh::FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> & meshNode,
   }
 
   for (auto & c : meshNode->m_children)
-    FillGpuBuffers(c, vbPtr, ibPtr, vbOffset, ibOffset, componentsMask);
+    FillGpuBuffers(c, vbPtr, ibPtr, vbOffset, ibOffset, fillIndexBuffer, componentsMask);
 }
 
 BaseMesh::MeshGroup const & BaseMesh::FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,

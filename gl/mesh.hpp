@@ -8,13 +8,17 @@ namespace rf::gl
 class VertexArray
 {
 public:
-  explicit VertexArray(uint32_t componentsMask);
+  VertexArray();
   ~VertexArray();
 
+  void BindVertexAttributes(uint32_t componentsMask);
+
   void Bind();
+  void Unbind();
 
 private:
   GLuint m_vertexArray = 0;
+  uint32_t m_lastStartIndex = 0;
 };
 
 class Mesh : public BaseMesh
@@ -38,6 +42,7 @@ private:
   std::unique_ptr<VertexArray> m_vertexArray;
   GLuint m_vertexBuffer = 0;
   GLuint m_indexBuffer = 0;
+  GLuint m_bonesIndicesBuffer = 0;
 };
 
 class SinglePointMesh

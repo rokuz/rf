@@ -205,8 +205,15 @@ bool Texture::Initialize(std::string && fileName)
 
   stbi_set_flip_vertically_on_load(true);
   ImageInfo info;
+
+  if (!stbi_info(fileName.c_str(), &info.width, &info.height, &info.components))
+  {
+    Logger::ToLogWithFormat(Logger::Error, "Could not get info from the file '%s'.", fileName.c_str());
+    return false;
+  }
+
   info.imageData =
-      stbi_load(fileName.c_str(), &info.width, &info.height, &info.components, STBI_rgb_alpha);
+    stbi_load(fileName.c_str(), &info.width, &info.height, &info.components, info.components);
   if (info.imageData == nullptr)
   {
     Logger::ToLogWithFormat(Logger::Error, "Could not load file '%s'.", fileName.c_str());
@@ -222,7 +229,7 @@ bool Texture::Initialize(std::string && fileName)
   }
 
   bool result = InitializeWithData(m_format, info.imageData, static_cast<size_t>(info.width),
-                                   static_cast<size_t>(info.height), true);
+                                   static_cast<size_t>(info.height), false);
   stbi_image_free(info.imageData);
 
   return result;

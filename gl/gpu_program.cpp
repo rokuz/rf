@@ -398,6 +398,19 @@ void GpuProgram::SetMatrixArray(std::string const & uniform, glm::mat4x4 * mat, 
   glUniformMatrix4fv(uf, count, static_cast<GLboolean>(false), glm::value_ptr(mat[0]));
 }
 
+void GpuProgram::SetTexture(std::string const & uniform, Texture * texture, int slot)
+{
+  CHECK(texture != nullptr, "Texture must exist");
+
+  auto const uf = GetUniformLocationInternal(uniform);
+  if (uf < 0)
+    return;
+
+  glActiveTexture(GL_TEXTURE0 + slot);
+  texture->Bind();
+  glUniform1i(uf, slot);
+}
+
 //void GpuProgram::SetUniformBuffer(std::string const & uniform,
 //                                  UniformBuffer * buffer, int index)
 //{
@@ -410,18 +423,6 @@ void GpuProgram::SetMatrixArray(std::string const & uniform, glm::mat4x4 * mat, 
 //
 //  buffer->Bind(index);
 //  glUniformBlockBinding(m_program, uf, index);
-//}
-//
-//void GpuProgram::SetTexture(std::string const & uniform, Texture * texture, int slot)
-//{
-//  if (texture == nullptr)
-//    return;
-//
-//  auto const uf = GetUniformLocationInternal(uniform);
-//  if (uf < 0)
-//    return;
-//
-//  SetTextureInternal(uf, texture, slot);
 //}
 //
 //void GpuProgram::SetTexture(std::string const & uniform, RenderTarget * renderTarget,
@@ -461,13 +462,6 @@ void GpuProgram::SetMatrixArray(std::string const & uniform, glm::mat4x4 * mat, 
 //    return;
 //
 //  SetImageInternal(uf, renderTarget, index, readFlag, writeFlag, slot);
-//}
-//
-//void GpuProgram::SetTextureInternal(int uniformIndex, Texture * texture, int slot)
-//{
-//  glActiveTexture(GL_TEXTURE0 + slot);
-//  texture->Bind();
-//  glUniform1i(uniformIndex, slot);
 //}
 //
 //void GpuProgram::SetTextureInternal(int uniformIndex, RenderTarget * renderTarget,

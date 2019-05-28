@@ -9,17 +9,19 @@ MaterialColor const kInvalidColor = MaterialColor();
 
 struct MeshMaterial
 {
-  std::string diffuseTexture;
-  std::string normalsTexture;
-  std::string specularTexture;
-  MaterialColor diffuseColor = kInvalidColor;
-  MaterialColor specularColor = kInvalidColor;
-  MaterialColor ambientColor = kInvalidColor;
+  std::string m_diffuseTexture;
+  std::string m_normalsTexture;
+  std::string m_specularTexture;
+  MaterialColor m_diffuseColor = kInvalidColor;
+  MaterialColor m_specularColor = kInvalidColor;
+  MaterialColor m_ambientColor = kInvalidColor;
 
-  bool isValid() const
+  bool IsValid() const
   {
-    return !diffuseTexture.empty() || !normalsTexture.empty() || !specularTexture.empty() ||
-           diffuseColor || specularColor || ambientColor;
+    return !m_diffuseTexture.empty() ||
+           !m_normalsTexture.empty() ||
+           !m_specularTexture.empty() ||
+           m_diffuseColor || m_specularColor || m_ambientColor;
   }
 };
 
@@ -37,6 +39,12 @@ enum MeshVertexAttribute : uint32_t
   Color = 1 << 7,
   BoneIndices = 1 << 8,
   BoneWeights = 1 << 9
+};
+
+enum class MeshAttributeUnderlyingType : uint8_t
+{
+  Float,
+  UnsignedInteger
 };
 
 std::string const kAttributesNames[] = {"aPosition",    "aNormal",     "aUV0",     "aUV1",
@@ -123,8 +131,10 @@ protected:
                                glm::mat4x4 const & parentTransform,
                                std::vector<glm::mat4x4> & bonesTransforms);
 
-  void FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> & meshNode, uint8_t * vbPtr, uint32_t * ibPtr,
-                      uint32_t & vbOffset, uint32_t & ibOffset, uint32_t componentsMask);
+  void FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
+                      uint8_t * vbPtr, uint32_t * ibPtr,
+                      uint32_t & vbOffset, uint32_t & ibOffset,
+                      bool fillIndexBuffer, uint32_t componentsMask);
 
   MeshGroup const & FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode, int index) const;
   MeshGroup const & FindCachedMeshGroup(int index) const;
@@ -153,6 +163,7 @@ extern void ForEachAttributeWithCheck(uint32_t componentsMask,
 extern uint32_t GetAttributeElementsCount(MeshVertexAttribute attr);
 extern uint32_t GetAttributeSizeInBytes(MeshVertexAttribute attr);
 extern uint32_t GetAttributeOffsetInBytes(uint32_t componentsMask, MeshVertexAttribute attr);
+extern MeshAttributeUnderlyingType GetAttributeUnderlyingType(MeshVertexAttribute attr);
 
 extern uint32_t GetVertexSizeInBytes(uint32_t componentsMask);
 }  // namespace rf

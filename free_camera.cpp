@@ -7,8 +7,11 @@ namespace rf
 void FreeCamera::Setup(glm::vec3 const & from, glm::vec3 const & to)
 {
   glm::vec3 dir = glm::normalize(to - from);
-  m_angles.x = RadToDeg(acos(dir.z));
-  m_angles.y = RadToDeg(atan2(dir.y, dir.x));
+  if (dir.x == 0.0f && dir.y == 0.0f)
+    m_angles.x = 0.0f;
+  else
+    m_angles.x = 90.0f + RadToDeg(atan2(dir.y, dir.x));
+  m_angles.y = RadToDeg(acos(dir.z));
 
   auto const q1 = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                               DegToRad(m_angles.x), glm::vec3(0.0f, 1.0f, 0.0f));

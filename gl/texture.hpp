@@ -9,6 +9,7 @@ class Texture
 {
 public:
   Texture() = default;
+  explicit Texture(std::string const & id) : m_id(id) {}
   ~Texture();
 
   bool Initialize(std::string && fileName);
@@ -29,6 +30,9 @@ public:
   int GetFormat() const { return m_format; }
   int GetPixelFormat() const { return m_pixelFormat; }
 
+  void SetId(std::string const & id) { m_id = id; }
+  std::string GetId() const { return m_id; }
+
 private:
   GLuint m_texture = 0;
   GLenum m_target = 0;
@@ -38,6 +42,7 @@ private:
   int m_pixelFormat = 0;
   bool m_isLoaded = false;
   size_t m_arraySize = 0;
+  std::string m_id;
 
   void SetSampling();
   void GenerateMipmaps();

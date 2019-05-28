@@ -44,12 +44,13 @@ public:
   void SetMatrix(std::string const & uniform, glm::mat4x4 const & mat);
   void SetMatrixArray(std::string const & uniform, glm::mat4x4 * mat, int count);
 
+  void SetTexture(std::string const & uniform, Texture * texture, int slot);
+
   bool ValidateProgram() const;
 
 //	void SetUniformBuffer(std::string const & uniform, UniformBuffer * buffer,
 //												int index);
 //
-//	void SetTexture(std::string const & uniform, Texture * texture, int slot);
 //  void SetTexture(std::string const & uniform, RenderTarget * renderTarget,
 //                  int index, int slot);
 //  void SetDepth(std::string const & uniform, RenderTarget * renderTarget,
@@ -70,7 +71,6 @@ private:
 
   bool BindUniform(std::string const & uniform);
 
-//  void SetTextureInternal(int uniformIndex, Texture * texture, int slot);
 //  void SetTextureInternal(int uniformIndex, RenderTarget * renderTarget, int index,
 //                          int slot);
 //  void SetDepthInternal(int uniformIndex, RenderTarget * renderTarget, int slot);
