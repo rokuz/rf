@@ -299,7 +299,7 @@ bool Texture::InitializeAsCubemap(std::string && frontFileName, std::string && b
                                         std::move(topFileName), std::move(bottomFileName),
                                         std::move(frontFileName), std::move(backFileName)};
   ImageInfo info[kSidesCount];
-  auto cleanFunc = [&info]() {
+  auto cleanFunc = [&info, kSidesCount]() {
     for (size_t i = 0; i < kSidesCount; i++)
     {
       if (info[i].imageData != nullptr)

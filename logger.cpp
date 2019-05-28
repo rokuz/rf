@@ -47,7 +47,7 @@ void Logger::ToLogImpl(std::string const & message, std::string const & endLine)
     if (!endLine.empty())
       std::cout << endLine;
 #ifdef WINDOWS_PLATFORM
-    OutputDebugStringA((SeverityToString(severity) + message).c_str());
+    OutputDebugStringA(message.c_str());
     if (!endLine.empty())
       OutputDebugStringA(endLine.c_str());
 #endif

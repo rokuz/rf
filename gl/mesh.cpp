@@ -12,7 +12,6 @@ uint32_t BindAttributes(uint32_t startIndex, uint32_t componentsMask)
   uint32_t index = startIndex;
   ForEachAttribute(componentsMask, [&offset, &index, vertexSize](MeshVertexAttribute attr)
   {
-    glEnableVertexAttribArray(index);
     switch (GetAttributeUnderlyingType(attr))
     {
       case MeshAttributeUnderlyingType::Float:
@@ -26,6 +25,7 @@ uint32_t BindAttributes(uint32_t startIndex, uint32_t componentsMask)
       default:
         CHECK(false, ("Unknown underlying type."));
     }
+    glEnableVertexAttribArray(index);
 
     offset += GetAttributeSizeInBytes(attr);
     index++;
