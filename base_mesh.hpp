@@ -95,6 +95,7 @@ public:
   size_t GetAnimationsCount() const;
   void GetBonesTransforms(int groupIndex, size_t animIndex, double timeSinceStart, bool cycled,
                           std::vector<glm::mat4x4> & bonesTransforms);
+  uint32_t GetAttributesMask() const { return m_attributesMask; }
 
   struct MeshGroup
   {
@@ -118,11 +119,11 @@ public:
   };
 
 protected:
-  bool LoadMesh(std::string && filename);
-  bool GenerateSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
+  bool LoadMesh(std::string && filename, uint32_t desiredAttributesMask);
+  bool GenerateSphere(float radius, uint32_t attributesMask = Position | Normal | UV0 | Tangent);
   bool GeneratePlane(float width, float height, uint32_t widthSegments = 1,
                      uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
-                     uint32_t componentsMask = Position | Normal | UV0 | Tangent);
+                     uint32_t attributesMask = Position | Normal | UV0 | Tangent);
   void DestroyMesh();
 
   glm::mat4x4 FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime, bool & found);
@@ -134,15 +135,16 @@ protected:
   void FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                       uint8_t * vbPtr, uint32_t * ibPtr,
                       uint32_t & vbOffset, uint32_t & ibOffset,
-                      bool fillIndexBuffer, uint32_t componentsMask);
+                      bool fillIndexBuffer, uint32_t attributesMask);
 
-  MeshGroup const & FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode, int index) const;
+  MeshGroup const & FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
+                                  int index) const;
   MeshGroup const & FindCachedMeshGroup(int index) const;
   
   bool m_isLoaded = false;
   uint32_t m_verticesCount = 0;
   uint32_t m_indicesCount = 0;
-  uint32_t m_componentsMask = 0;
+  uint32_t m_attributesMask = 0;
   int m_groupsCount = 0;
   
   MaterialCollection m_materials;
@@ -155,15 +157,15 @@ protected:
   mutable std::vector<MeshGroup const *> m_groupsCache;
 };
 
-extern void ForEachAttribute(uint32_t componentsMask,
+extern void ForEachAttribute(uint32_t attributesMask,
                              std::function<void(MeshVertexAttribute)> const & func);
-extern void ForEachAttributeWithCheck(uint32_t componentsMask,
+extern void ForEachAttributeWithCheck(uint32_t attributesMask,
                                       std::function<bool(MeshVertexAttribute)> const & func);
 
 extern uint32_t GetAttributeElementsCount(MeshVertexAttribute attr);
 extern uint32_t GetAttributeSizeInBytes(MeshVertexAttribute attr);
-extern uint32_t GetAttributeOffsetInBytes(uint32_t componentsMask, MeshVertexAttribute attr);
+extern uint32_t GetAttributeOffsetInBytes(uint32_t attributesMask, MeshVertexAttribute attr);
 extern MeshAttributeUnderlyingType GetAttributeUnderlyingType(MeshVertexAttribute attr);
 
-extern uint32_t GetVertexSizeInBytes(uint32_t componentsMask);
+extern uint32_t GetVertexSizeInBytes(uint32_t attributesMask);
 }  // namespace rf

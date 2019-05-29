@@ -5,12 +5,12 @@ namespace rf::gl
 {
 namespace
 {
-uint32_t BindAttributes(uint32_t startIndex, uint32_t componentsMask)
+uint32_t BindAttributes(uint32_t startIndex, uint32_t attributesMask)
 {
-  uint32_t const vertexSize = GetVertexSizeInBytes(componentsMask);
+  uint32_t const vertexSize = GetVertexSizeInBytes(attributesMask);
   uint32_t offset = 0;
   uint32_t index = startIndex;
-  ForEachAttribute(componentsMask, [&offset, &index, vertexSize](MeshVertexAttribute attr)
+  ForEachAttribute(attributesMask, [&offset, &index, vertexSize](MeshVertexAttribute attr)
   {
     switch (GetAttributeUnderlyingType(attr))
     {
@@ -48,9 +48,9 @@ VertexArray::~VertexArray()
   }
 }
 
-void VertexArray::BindVertexAttributes(uint32_t componentsMask)
+void VertexArray::BindVertexAttributes(uint32_t attributesMask)
 {
-  m_lastStartIndex = BindAttributes(m_lastStartIndex, componentsMask);
+  m_lastStartIndex = BindAttributes(m_lastStartIndex, attributesMask);
 }
 
 void VertexArray::Bind()
@@ -76,12 +76,6 @@ void Mesh::Destroy()
     m_vertexBuffer = 0;
   }
 
-  if (m_bonesIndicesBuffer != 0)
-  {
-    glDeleteBuffers(1, &m_bonesIndicesBuffer);
-    m_bonesIndicesBuffer = 0;
-  }
-
   if (m_indexBuffer != 0)
   {
     glDeleteBuffers(1, &m_indexBuffer);
@@ -93,11 +87,11 @@ void Mesh::Destroy()
   DestroyMesh();
 }
 
-bool Mesh::Initialize(std::string && fileName)
+bool Mesh::Initialize(std::string && fileName, uint32_t desiredAttributesMask)
 {
   Destroy();
 
-  if (!LoadMesh(std::move(fileName)))
+  if (!LoadMesh(std::move(fileName), desiredAttributesMask))
     return false;
 
   InitBuffers();
@@ -123,7 +117,7 @@ void Mesh::RenderGroup(int index, uint32_t instancesCount) const
   if (instancesCount == 1)
   {
     glDrawElements(GL_TRIANGLES, group.m_indicesCount, GL_UNSIGNED_INT,
-                   (GLvoid const *)(group.m_startIndex * sizeof(uint32_t)));
+                   reinterpret_cast<void const *>(group.m_startIndex * sizeof(uint32_t)));
   }
   else
   {
@@ -133,9 +127,9 @@ void Mesh::RenderGroup(int index, uint32_t instancesCount) const
   }
 }
 
-bool Mesh::InitializeAsSphere(float radius, uint32_t componentsMask)
+bool Mesh::InitializeAsSphere(float radius, uint32_t attributesMask)
 {
-  if (!GenerateSphere(radius, componentsMask))
+  if (!GenerateSphere(radius, attributesMask))
     return false;
 
   InitBuffers();
@@ -150,10 +144,10 @@ bool Mesh::InitializeAsSphere(float radius, uint32_t componentsMask)
 
 bool Mesh::InitializeAsPlane(float width, float height, uint32_t widthSegments,
                              uint32_t heightSegments, uint32_t uSegments,
-                             uint32_t vSegments, uint32_t componentsMask)
+                             uint32_t vSegments, uint32_t attributesMask)
 {
   if (!GeneratePlane(width, height, widthSegments, heightSegments, uSegments,
-                     vSegments, componentsMask))
+                     vSegments, attributesMask))
   {
     return false;
   }
@@ -170,44 +164,27 @@ bool Mesh::InitializeAsPlane(float width, float height, uint32_t widthSegments,
 
 void Mesh::InitBuffers()
 {
-  uint32_t componentsMask = m_componentsMask;
-  if (m_componentsMask & MeshVertexAttribute::BoneIndices)
-    componentsMask &= (~MeshVertexAttribute::BoneIndices);
-
   m_vertexArray = std::make_unique<VertexArray>();
   m_vertexArray->Bind();
 
   uint32_t vbOffset = 0;
   uint32_t ibOffset = 0;
-  std::vector<uint8_t> vb(GetVertexSizeInBytes(componentsMask) * m_verticesCount, 0);
+  std::vector<uint8_t> vb(GetVertexSizeInBytes(m_attributesMask) * m_verticesCount, 0);
   std::vector<uint32_t> ib(m_indicesCount, 0);
   FillGpuBuffers(m_rootNode, vb.data(), ib.data(), vbOffset, ibOffset,
-                 true /* fillIndexBuffer */, componentsMask);
+                 true /* fillIndexBuffer */, m_attributesMask);
 
   // Fill OpenGL buffers.
   glGenBuffers(1, &m_vertexBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
   glBufferData(GL_ARRAY_BUFFER, vb.size(), vb.data(), GL_STATIC_DRAW);
-  m_vertexArray->BindVertexAttributes(componentsMask);
 
-  if (m_componentsMask & MeshVertexAttribute::BoneIndices)
-  {
-    componentsMask = MeshVertexAttribute::BoneIndices;
-    vbOffset = 0;
-    ibOffset = 0;
-    std::vector<uint8_t> bi(GetVertexSizeInBytes(componentsMask) * m_verticesCount, 0);
-    FillGpuBuffers(m_rootNode, bi.data(), nullptr, vbOffset, ibOffset,
-                   false /* fillIndexBuffer */, componentsMask);
-
-    glGenBuffers(1, &m_bonesIndicesBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, m_bonesIndicesBuffer);
-    glBufferData(GL_ARRAY_BUFFER, bi.size(), bi.data(), GL_STATIC_DRAW);
-    m_vertexArray->BindVertexAttributes(componentsMask);
-  }
+  m_vertexArray->BindVertexAttributes(m_attributesMask);
 
   glGenBuffers(1, &m_indexBuffer);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, ib.size() * sizeof(uint32_t), ib.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, ib.size() * sizeof(uint32_t),
+               ib.data(), GL_STATIC_DRAW);
 
   m_vertexArray->Unbind();
 

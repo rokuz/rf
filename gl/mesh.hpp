@@ -11,7 +11,7 @@ public:
   VertexArray();
   ~VertexArray();
 
-  void BindVertexAttributes(uint32_t componentsMask);
+  void BindVertexAttributes(uint32_t attributesMask);
 
   void Bind();
   void Unbind();
@@ -27,11 +27,11 @@ public:
   Mesh() = default;
   ~Mesh() override;
 
-  bool Initialize(std::string && fileName);
-  bool InitializeAsSphere(float radius, uint32_t componentsMask = Position | Normal | UV0 | Tangent);
+  bool Initialize(std::string && fileName, uint32_t desiredAttributesMask = 0xffffffff);
+  bool InitializeAsSphere(float radius, uint32_t attributesMask = Position | Normal | UV0 | Tangent);
   bool InitializeAsPlane(float width, float height, uint32_t widthSegments = 1,
                          uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
-                         uint32_t componentsMask = Position | Normal | UV0 | Tangent);
+                         uint32_t attributesMask = Position | Normal | UV0 | Tangent);
 
   void RenderGroup(int index, uint32_t instancesCount = 1) const;
 
@@ -42,7 +42,6 @@ private:
   std::unique_ptr<VertexArray> m_vertexArray;
   GLuint m_vertexBuffer = 0;
   GLuint m_indexBuffer = 0;
-  GLuint m_bonesIndicesBuffer = 0;
 };
 
 class SinglePointMesh

@@ -240,6 +240,8 @@ bool Texture::InitializeWithData(GLint format, unsigned char const * buffer, siz
 {
   Destroy();
 
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
   m_target = GL_TEXTURE_2D;
   m_format = format;
   m_pixelFormat = pixelFormat < 0 ? FindPixelFormat(format) : pixelFormat;
@@ -342,6 +344,8 @@ bool Texture::InitializeAsCubemap(std::string && frontFileName, std::string && b
     return false;
   }
 
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
   m_target = GL_TEXTURE_CUBE_MAP;
   m_width = static_cast<size_t>(info[0].width);
   m_height = static_cast<size_t>(info[0].height);
@@ -442,6 +446,8 @@ bool Texture::InitializeAsArray(std::vector<std::string> && filenames, bool mipm
     cleanFunc();
     return false;
   }
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
   m_target = GL_TEXTURE_2D_ARRAY;
   m_width = static_cast<size_t>(info[0].width);
