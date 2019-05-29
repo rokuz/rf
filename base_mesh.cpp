@@ -238,7 +238,7 @@ void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * sc
       std::vector<uint8_t> bonesUsage(numVertices, 0);
       std::vector<BoneWeightsData> boneWeights(numVertices);
       std::vector<BoneIndicesData> boneIndices(numVertices);
-      for (uint32_t i = 0; i < mesh->mNumBones; i++)
+      for (uint32_t i = 0; i < mesh->mNumBones; ++i)
       {
         aiBone * bone = mesh->mBones[i];
         std::string boneName = std::string(bone->mName.C_Str());
@@ -264,16 +264,27 @@ void LoadNode(std::unique_ptr<BaseMesh::MeshNode> & meshNode, aiScene const * sc
           ASSERT(vertexId < numVertices, "");
 
           uint8_t b = bonesUsage[vertexId];
+          auto const weight = bone->mWeights[weightIndex].mWeight;
           if (b >= kMaxBonesPerVertex)
           {
-            b = kMaxBonesPerVertex - 1;
             Logger::ToLogWithFormat(Logger::Warning,
               "Maximum number of bones per vertex (%d) is exceeded.\n",
               kMaxBonesPerVertex);
+
+            // Remove bone with minimal weight.
+            uint8_t minIndex = 0;
+            for (uint8_t j = 1; j < kMaxBonesPerVertex; ++j)
+            {
+              if (boneWeights[vertexId].m_data[j] < boneWeights[vertexId].m_data[minIndex])
+                minIndex = j;
+            }
+            if (weight < boneWeights[vertexId].m_data[minIndex])
+              continue;
+            b = minIndex;
           }
           bonesUsage[vertexId]++;
 
-          boneWeights[vertexId].m_data[b] = bone->mWeights[weightIndex].mWeight;
+          boneWeights[vertexId].m_data[b] = weight;
           boneIndices[vertexId].m_data[b] = boneIndex;
         }
       }
