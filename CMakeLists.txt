@@ -62,6 +62,8 @@ endif()
 set(SRC_LIST
   base_mesh.cpp
   base_mesh.hpp
+  base_texture.cpp
+  base_texture.hpp
   camera.cpp
   camera.hpp
   common.hpp

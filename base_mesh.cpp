@@ -464,8 +464,7 @@ std::string CheckTexturePath(std::string const & meshPath, std::string texturePa
 }  // namespace
 
 BaseMesh::BaseMesh()
-  : m_isLoaded(false)
-  , m_verticesCount(0)
+  : m_verticesCount(0)
   , m_indicesCount(0)
   , m_attributesMask(0)
   , m_groupsCount(0)
@@ -724,7 +723,6 @@ bool BaseMesh::LoadMesh(std::string && filename, uint32_t desiredAttributesMask)
         m_animations.push_back(std::move(anim));
     }
   }
-  m_isLoaded = true;
 
   return true;
 }
@@ -742,7 +740,6 @@ bool BaseMesh::GenerateSphere(float radius, uint32_t attributesMask)
   m_indicesCount = meshGroup.m_indicesCount;
   m_groupsCount = 1;
   m_rootNode->m_groups.push_back(std::move(meshGroup));
-  m_isLoaded = true;
 
   return true;
 }
@@ -764,7 +761,6 @@ bool BaseMesh::GeneratePlane(float width, float height, uint32_t widthSegments, 
   m_indicesCount = meshGroup.m_indicesCount;
   m_groupsCount = 1;
   m_rootNode->m_groups.push_back(std::move(meshGroup));
-  m_isLoaded = true;
 
   return true;
 }
@@ -782,7 +778,6 @@ void BaseMesh::DestroyMesh()
   m_indicesCount = 0;
   m_attributesMask = 0;
   m_groupsCount = 0;
-  m_isLoaded = false;
 }
 
 void BaseMesh::FillGpuBuffers(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,

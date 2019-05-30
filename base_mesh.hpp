@@ -140,8 +140,7 @@ protected:
   MeshGroup const & FindMeshGroup(std::unique_ptr<BaseMesh::MeshNode> const & meshNode,
                                   int index) const;
   MeshGroup const & FindCachedMeshGroup(int index) const;
-  
-  bool m_isLoaded = false;
+
   uint32_t m_verticesCount = 0;
   uint32_t m_indicesCount = 0;
   uint32_t m_attributesMask = 0;

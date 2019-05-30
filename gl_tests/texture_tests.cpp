@@ -27,7 +27,7 @@ TEST(Texture, Smoke)
   EXPECT_EQ(true, tex.InitializeWithData(GL_RGBA8, buf.data(), width, height, true));
 
   char const * const kFilename = "test.png";
-  rf::gl::SaveTextureToPng(kFilename, tex);
+  tex.Save(std::string(kFilename));
 
   EXPECT_EQ(true, rf::Utils::IsPathExisted(kFilename));
 

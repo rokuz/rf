@@ -34,9 +34,14 @@ TEST(FreeCamera, Smoke)
 
   EXPECT_FLOAT_EQ(camera.GetPosition().z, 1.0f);
 
+  // Rotate camera to the right (-x direction).
+  camera.SetRotationSpeed(1.0f);
   camera.OnMouseButton(100.0f, 100.0f, GLFW_MOUSE_BUTTON_1, true /* pressed */);
   camera.OnMouseMove(150.0, 100.0f);
   camera.Update(1.0f /* in seconds */, 1024, 768);
   camera.OnMouseButton(150.0f, 100.0f, GLFW_MOUSE_BUTTON_1, false /* pressed */);
-  //TODO
+
+  glm::vec3 v = camera.GetOrientation() * glm::vec3(0.0f, 0.0f, 1.0f);
+  EXPECT_FLOAT_EQ(v.y, 0.0f);
+  EXPECT_LT(v.x, 0.0);
 }

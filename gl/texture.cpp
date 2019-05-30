@@ -1,11 +1,5 @@
 #include "texture.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
-
 #include "rf.hpp"
 
 namespace rf::gl
@@ -142,44 +136,30 @@ int FindPixelFormat(int textureFormat)
   return -1;
 }
 
-int FindFormat(int components)
+TextureFormat ConvertFromOpenGLFormat(int format)
 {
-  int format;
-  switch (components)
+  switch (format)
   {
-    case 1:
-      format = GL_R8;
-      break;
-    case 3:
-      format = GL_RGB8;
-      break;
-    case 4:
-      format = GL_RGBA8;
-      break;
-    default:
-      format = -1;
+  case GL_R8 : return TextureFormat::R8;
+  case GL_RG8 : return TextureFormat::RG8;
+  case GL_RGB8 : return TextureFormat::RGB8;
+  case GL_RGBA8 : return TextureFormat::RGBA8;
   }
-  return format;
+  return TextureFormat::Unspecified;
 }
 
-int GetMipLevelsCount(size_t width, size_t height)
+int ConvertToOpenGLFormat(TextureFormat format)
 {
-  auto const sz = std::min(width, height);
-  return static_cast<int>(log2(static_cast<float>(sz) + 1));
-}
-
-struct ImageInfo
-{
-  int width = 0;
-  int height = 0;
-  int components = 0;
-  uint8_t * imageData = nullptr;
-};
-
-bool AreEqual(ImageInfo const & info1, ImageInfo const & info2)
-{
-  return (info1.width == info2.width) && (info1.height == info2.height) &&
-         (info1.components == info2.components);
+  switch (format)
+  {
+  case TextureFormat::R8 : return GL_R8;
+  case TextureFormat::RG8 : return GL_RG8;
+  case TextureFormat::RGB8 : return GL_RGB8;
+  case TextureFormat::RGBA8 : return GL_RGBA8;
+  default:
+    Logger::ToLog(Logger::Warning, "Unsupported texture format conversion for OpenGL.");
+  }
+  return -1;
 }
 }  // namespace
 
@@ -190,68 +170,42 @@ Texture::~Texture()
 
 bool Texture::Initialize(std::string && fileName)
 {
-  // Workaround for some CMake generated projects.
-  if (!Utils::IsPathExisted(fileName))
-  {
-    fileName = "../" + fileName;
-    if (!Utils::IsPathExisted(fileName))
-    {
-      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.", fileName.c_str());
-      return false;
-    }
-  }
-
   Destroy();
 
-  stbi_set_flip_vertically_on_load(true);
-  ImageInfo info;
-
-  if (!stbi_info(fileName.c_str(), &info.width, &info.height, &info.components))
-  {
-    Logger::ToLogWithFormat(Logger::Error, "Could not get info from the file '%s'.", fileName.c_str());
+  auto imageData = Load(std::move(fileName));
+  if (imageData == nullptr)
     return false;
-  }
 
-  info.imageData =
-    stbi_load(fileName.c_str(), &info.width, &info.height, &info.components, info.components);
-  if (info.imageData == nullptr)
-  {
-    Logger::ToLogWithFormat(Logger::Error, "Could not load file '%s'.", fileName.c_str());
+  m_innerFormat = ConvertToOpenGLFormat(m_format);
+  if (m_innerFormat < 0)
     return false;
-  }
 
-  m_format = FindFormat(info.components);
-  if (m_format == -1)
-  {
-    Logger::ToLogWithFormat(Logger::Error, "Format of file '%s' is unknown.", fileName.c_str());
-    stbi_image_free(info.imageData);
-    return false;
-  }
-
-  bool result = InitializeWithData(m_format, info.imageData, static_cast<size_t>(info.width),
-                                   static_cast<size_t>(info.height), false);
-  stbi_image_free(info.imageData);
-
+  auto const result = InitializeWithData(m_innerFormat, imageData, m_width,
+                                         m_height, true /* mipmaps */);
+  FreeLoadedData(imageData);
   return result;
 }
 
-bool Texture::InitializeWithData(GLint format, unsigned char const * buffer, size_t width,
-                                 size_t height, bool mipmaps, int pixelFormat)
+bool Texture::InitializeWithData(GLint format, uint8_t const * buffer,
+                                 uint32_t width, uint32_t height,
+                                 bool mipmaps, int pixelFormat)
 {
   Destroy();
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
   m_target = GL_TEXTURE_2D;
-  m_format = format;
-  m_pixelFormat = pixelFormat < 0 ? FindPixelFormat(format) : pixelFormat;
   m_width = width;
   m_height = height;
+  m_format = ConvertFromOpenGLFormat(format);
+  m_innerFormat = format;
+  m_pixelFormat = pixelFormat < 0 ? FindPixelFormat(format) : pixelFormat;
   glGenTextures(1, &m_texture);
   glBindTexture(m_target, m_texture);
-  int mipLevels = mipmaps ? GetMipLevelsCount(m_width, m_height) : 1;
-  glTexStorage2D(m_target, mipLevels, m_format, m_width, m_height);
-  glTexSubImage2D(m_target, 0, 0, 0, m_width, m_height, m_pixelFormat, GL_UNSIGNED_BYTE, buffer);
+  auto const mipLevels = mipmaps ? CalculateMipLevelsCount() : 1;
+  glTexStorage2D(m_target, mipLevels, m_innerFormat, m_width, m_height);
+  glTexSubImage2D(m_target, 0, 0, 0, m_width, m_height, m_pixelFormat,
+                  GL_UNSIGNED_BYTE, buffer);
 
   SetSampling();
   if (mipmaps)
@@ -263,79 +217,39 @@ bool Texture::InitializeWithData(GLint format, unsigned char const * buffer, siz
     Destroy();
     return false;
   }
-
-  m_isLoaded = true;
-  return m_isLoaded;
+  return true;
 }
 
-bool Texture::InitializeAsCubemap(std::string && frontFileName, std::string && backFileName,
-                                  std::string && leftFileName, std::string && rightFileName,
-                                  std::string && topFileName, std::string && bottomFileName,
+bool Texture::InitializeAsCubemap(std::string && rightFileName,
+                                  std::string && leftFileName,
+                                  std::string && topFileName,
+                                  std::string && bottomFileName,
+                                  std::string && frontFileName,
+                                  std::string && backFileName,
                                   bool mipmaps)
 {
-  // Workaround for some CMake generated projects.
-  if (!Utils::IsPathExisted(frontFileName))
-  {
-    frontFileName = "../" + frontFileName;
-    if (!Utils::IsPathExisted(frontFileName))
-    {
-      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.", frontFileName.c_str());
-      return false;
-    }
-    else
-    {
-      backFileName = "../" + backFileName;
-      leftFileName = "../" + leftFileName;
-      rightFileName = "../" + rightFileName;
-      topFileName = "../" + topFileName;
-      bottomFileName = "../" + bottomFileName;
-    }
-  }
-
   Destroy();
 
-  stbi_set_flip_vertically_on_load(true);
+  auto imageData = LoadCubemap(std::move(rightFileName), std::move(leftFileName),
+                               std::move(topFileName), std::move(bottomFileName),
+                               std::move(frontFileName), std::move(backFileName));
+  if (imageData.empty())
+    return false;
 
-  size_t constexpr kSidesCount = 6;
-  std::string filenames[kSidesCount] = {std::move(rightFileName), std::move(leftFileName),
-                                        std::move(topFileName), std::move(bottomFileName),
-                                        std::move(frontFileName), std::move(backFileName)};
-  ImageInfo info[kSidesCount];
-  auto cleanFunc = [&info, kSidesCount]() {
-    for (size_t i = 0; i < kSidesCount; i++)
-    {
-      if (info[i].imageData != nullptr)
-        stbi_image_free(info[i].imageData);
-    }
+  auto cleanFunc = [this, &imageData]()
+  {
+    for (auto & d : imageData)
+      FreeLoadedData(d);
   };
 
-  for (size_t i = 0; i < kSidesCount; i++)
+  m_innerFormat = ConvertToOpenGLFormat(m_format);
+  if (m_innerFormat < 0)
   {
-    info[i].imageData = stbi_load(filenames[i].c_str(), &info[i].width, &info[i].height,
-                                  &info[i].components, STBI_rgb_alpha);
-    if (info[i].imageData == nullptr)
-    {
-      cleanFunc();
-      return false;
-    }
-
-    if (i > 0 && !AreEqual(info[i], info[i - 1]))
-    {
-      Logger::ToLogWithFormat(Logger::Error,
-        "Could not create a cubemap, files have different properties (width, height, components).");
-      cleanFunc();
-      return false;
-    }
-  }
-
-  m_format = FindFormat(info[0].components);
-  if (m_format < 0)
-  {
-    Logger::ToLogWithFormat(Logger::Error, "Cubemap format is unsupported.");
     cleanFunc();
     return false;
   }
-  m_pixelFormat = FindPixelFormat(m_format);
+
+  m_pixelFormat = FindPixelFormat(m_innerFormat);
   if (m_pixelFormat < 0)
   {
     Logger::ToLogWithFormat(Logger::Error,
@@ -347,17 +261,17 @@ bool Texture::InitializeAsCubemap(std::string && frontFileName, std::string && b
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
   m_target = GL_TEXTURE_CUBE_MAP;
-  m_width = static_cast<size_t>(info[0].width);
-  m_height = static_cast<size_t>(info[0].height);
   glGenTextures(1, &m_texture);
   glBindTexture(m_target, m_texture);
-  int mipLevels = mipmaps ? GetMipLevelsCount(m_width, m_height) : 1;
-  glTexStorage2D(m_target, mipLevels, m_format, m_width, m_height);
-  for (size_t i = 0; i < 6; i++)
+  auto const mipLevels = mipmaps ? CalculateMipLevelsCount() : 1;
+  glTexStorage2D(m_target, mipLevels, m_innerFormat, m_width, m_height);
+  CHECK(imageData.size() == 6, "");
+  for (size_t i = 0; i < imageData.size(); ++i)
   {
     glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height,
-                    m_pixelFormat, GL_UNSIGNED_BYTE, info[i].imageData);
+                    m_pixelFormat, GL_UNSIGNED_BYTE, imageData[i]);
   }
+
   SetSampling();
   if (mipmaps)
     GenerateMipmaps();
@@ -371,78 +285,36 @@ bool Texture::InitializeAsCubemap(std::string && frontFileName, std::string && b
     return false;
   }
 
-  m_isLoaded = true;
-  return m_isLoaded;
+  return true;
 }
 
 bool Texture::InitializeAsArray(std::vector<std::string> && filenames, bool mipmaps)
 {
-  ASSERT(filenames.size() > 0, "");
-
-  // Workaround for some CMake generated projects.
-  if (!Utils::IsPathExisted(filenames.front()))
-  {
-    filenames.front() = "../" + filenames.front();
-    if (!Utils::IsPathExisted(filenames.front()))
-    {
-      Logger::ToLogWithFormat(Logger::Error, "File '%s' is not found.",
-                              filenames.front().c_str());
-      return false;
-    }
-    else
-    {
-      for (size_t i = 1; i < filenames.size(); ++i)
-        filenames[i] = "../" + filenames[i];
-    }
-  }
-
+  CHECK(filenames.size() > 0, "");
   Destroy();
 
-  stbi_set_flip_vertically_on_load(true);
+  auto imageData = LoadArray(std::move(filenames));
+  if (imageData.empty())
+    return false;
 
-  m_arraySize = filenames.size();
-  std::vector<ImageInfo> info;
-  info.resize(m_arraySize);
-
-  auto cleanFunc = [this, &info]() {
-    for (size_t i = 0; i < m_arraySize; i++)
-    {
-      if (info[i].imageData != nullptr)
-        stbi_image_free(info[i].imageData);
-    }
+  auto cleanFunc = [this, &imageData]()
+  {
+    for (auto & d : imageData)
+      FreeLoadedData(d);
   };
 
-  for (size_t i = 0; i < m_arraySize; i++)
+  m_innerFormat = ConvertToOpenGLFormat(m_format);
+  if (m_innerFormat < 0)
   {
-    info[i].imageData = stbi_load(filenames[i].c_str(), &info[i].width, &info[i].height,
-                                  &info[i].components, STBI_rgb_alpha);
-    if (info[i].imageData == nullptr)
-    {
-      cleanFunc();
-      return false;
-    }
-
-    if (i > 0 && !AreEqual(info[i], info[i - 1]))
-    {
-      Logger::ToLogWithFormat(Logger::Error,
-        "Could not create an array, files have different properties (width, height, components).");
-      cleanFunc();
-      return false;
-    }
-  }
-
-  m_format = FindFormat(info[0].components);
-  if (m_format < 0)
-  {
-    Logger::ToLogWithFormat(Logger::Error, "Format of an array is unsupported.");
     cleanFunc();
     return false;
   }
-  m_pixelFormat = FindPixelFormat(m_format);
+
+  m_pixelFormat = FindPixelFormat(m_innerFormat);
   if (m_pixelFormat < 0)
   {
     Logger::ToLogWithFormat(Logger::Error,
-      "Could not create an array, pixel format is unsupported.");
+      "Could not create a textures array, the pixel format is unsupported.");
     cleanFunc();
     return false;
   }
@@ -450,17 +322,16 @@ bool Texture::InitializeAsArray(std::vector<std::string> && filenames, bool mipm
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
   m_target = GL_TEXTURE_2D_ARRAY;
-  m_width = static_cast<size_t>(info[0].width);
-  m_height = static_cast<size_t>(info[0].height);
   glGenTextures(1, &m_texture);
   glBindTexture(m_target, m_texture);
-  int mipLevels = mipmaps ? GetMipLevelsCount(m_width, m_height) : 1;
-  glTexStorage3D(m_target, mipLevels, m_format, m_width, m_height, m_arraySize);
-  for (size_t i = 0; i < m_arraySize; i++)
+  auto const mipLevels = mipmaps ? CalculateMipLevelsCount() : 1;
+  glTexStorage3D(m_target, mipLevels, m_innerFormat, m_width, m_height, m_arraySize);
+  for (size_t i = 0; i < m_arraySize; ++i)
   {
     glTexSubImage3D(m_target, 0, 0, 0, i, m_width, m_height, 1, m_pixelFormat,
-                    GL_UNSIGNED_BYTE, info[i].imageData);
+                    GL_UNSIGNED_BYTE, imageData[i]);
   }
+
   SetSampling();
   if (mipmaps)
     GenerateMipmaps();
@@ -474,8 +345,7 @@ bool Texture::InitializeAsArray(std::vector<std::string> && filenames, bool mipm
     return false;
   }
 
-  m_isLoaded = true;
-  return m_isLoaded;
+  return true;
 }
 
 void Texture::SetSampling()
@@ -521,10 +391,9 @@ void Texture::Destroy()
   m_target = 0;
   m_width = 0;
   m_height = 0;
-  m_format = 0;
-  m_pixelFormat = 0;
+  m_innerFormat = -1;
+  m_pixelFormat = -1;
   m_arraySize = 0;
-  m_isLoaded = false;
 }
 
 void Texture::Bind()
@@ -532,60 +401,34 @@ void Texture::Bind()
   glBindTexture(m_target, m_texture);
 }
 
-std::vector<uint8_t> LoadHeightmapData(std::string const & fileName, uint32_t & width,
-                                       uint32_t & height)
+void Texture::Save(std::string && filename) const
 {
-  stbi_set_flip_vertically_on_load(true);
-  ImageInfo info;
-  info.imageData = stbi_load(fileName.c_str(), &info.width, &info.height, &info.components, 0);
-  if (info.imageData == nullptr)
-  {
-    Logger::ToLogWithFormat(Logger::Error, "Could not load file '%s'.", fileName.c_str());
-    return std::vector<uint8_t>();
-  }
-
-  auto const bufSize = static_cast<size_t>(width * height);
-  std::vector<uint8_t> buffer;
-  buffer.resize(bufSize);
-
-  for (int i = 0; i < bufSize; i++)
-    buffer[i] = info.imageData[i * info.components];
-
-  stbi_image_free(info.imageData);
-  return buffer;
-}
-
-void SaveTextureToPng(std::string const & filename, Texture const & texture)
-{
-  glBindTexture(texture.m_target, texture.m_texture);
+  glBindTexture(m_target, m_texture);
 
   GLint sz = 0;
   GLint componentSize = 0;
-  glGetTexLevelParameteriv(texture.m_target, 0, GL_TEXTURE_RED_SIZE, &componentSize);
+  glGetTexLevelParameteriv(m_target, 0, GL_TEXTURE_RED_SIZE, &componentSize);
   sz += componentSize;
-  glGetTexLevelParameteriv(texture.m_target, 0, GL_TEXTURE_GREEN_SIZE, &componentSize);
+  glGetTexLevelParameteriv(m_target, 0, GL_TEXTURE_GREEN_SIZE, &componentSize);
   sz += componentSize;
-  glGetTexLevelParameteriv(texture.m_target, 0, GL_TEXTURE_BLUE_SIZE, &componentSize);
+  glGetTexLevelParameteriv(m_target, 0, GL_TEXTURE_BLUE_SIZE, &componentSize);
   sz += componentSize;
-  glGetTexLevelParameteriv(texture.m_target, 0, GL_TEXTURE_ALPHA_SIZE, &componentSize);
+  glGetTexLevelParameteriv(m_target, 0, GL_TEXTURE_ALPHA_SIZE, &componentSize);
   sz += componentSize;
   sz /= 8;
 
-  auto const bufSize = texture.GetWidth() * texture.GetHeight() * sz;
-  std::vector<unsigned char> pixels(bufSize);
-
-  int pixelFormat = texture.GetPixelFormat();
-  if (pixelFormat < 0)
+  if (m_pixelFormat < 0)
   {
     Logger::ToLogWithFormat(Logger::Error,
-      "Failed to save file '%s', pixel format is unsupported.", filename.c_str());
+      "Failed to save file '%s', the pixel format is unsupported.", filename.c_str());
     return;
   }
 
-  glGetTexImage(texture.m_target, 0, pixelFormat, GL_UNSIGNED_BYTE, pixels.data());
+  std::vector<uint8_t> pixels(static_cast<size_t>(m_width) * m_height * sz);
+  glGetTexImage(m_target, 0, m_pixelFormat, GL_UNSIGNED_BYTE, pixels.data());
   if (glCheckError())
     return;
 
-  stbi_write_png(filename.c_str(), texture.GetWidth(), texture.GetHeight(), sz, pixels.data(), 0);
+  SaveToPng(std::move(filename), m_width, m_height, m_format, pixels.data());
 }
 }  // namespace rf::gl
