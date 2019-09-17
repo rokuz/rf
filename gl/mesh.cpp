@@ -162,6 +162,27 @@ bool Mesh::InitializeAsPlane(float width, float height, uint32_t widthSegments,
   return true;
 }
 
+bool Mesh::InitializeAsTerrain(std::vector<uint8_t> const & heightmap,
+                               uint32_t heightmapWidth, uint32_t heightmapHeight,
+                               float minAltitude, float maxAltitude, float width, float height,
+                               uint32_t attributesMask)
+{
+  if (!GenerateTerrain(heightmap, heightmapWidth, heightmapHeight, minAltitude, maxAltitude,
+                       width, height, attributesMask))
+  {
+    return false;
+  }
+
+  InitBuffers();
+  if (glCheckError())
+  {
+    Destroy();
+    return false;
+  }
+
+  return true;
+}
+
 void Mesh::InitBuffers()
 {
   m_vertexArray = std::make_unique<VertexArray>();

@@ -765,6 +765,29 @@ bool BaseMesh::GeneratePlane(float width, float height, uint32_t widthSegments, 
   return true;
 }
 
+bool BaseMesh::GenerateTerrain(std::vector<uint8_t> const & heightmap,
+                               uint32_t heightmapWidth, uint32_t heightmapHeight,
+                               float minAltitude, float maxAltitude, float width, float height,
+                               uint32_t attributesMask)
+{
+  MeshGenerator generator;
+  BaseMesh::MeshGroup meshGroup;
+  if (!generator.GenerateTerrain(heightmap, heightmapWidth, heightmapHeight, attributesMask,
+                                 minAltitude, maxAltitude, width, height, meshGroup))
+  {
+    return false;
+  }
+
+  m_rootNode = std::make_unique<MeshNode>();
+  m_attributesMask = attributesMask;
+  m_verticesCount = meshGroup.m_verticesCount;
+  m_indicesCount = meshGroup.m_indicesCount;
+  m_groupsCount = 1;
+  m_rootNode->m_groups.push_back(std::move(meshGroup));
+
+  return true;
+}
+
 void BaseMesh::DestroyMesh()
 {
   m_groupsCache.clear();

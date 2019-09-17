@@ -2,6 +2,8 @@
 
 #include "logger.hpp"
 
+#include "3party/delaunator-cpp/include/delaunator.hpp"
+
 namespace rf
 {
 namespace
@@ -350,6 +352,132 @@ bool MeshGenerator::GeneratePlane(float width, float height, uint32_t components
 
         return true;
       });
+
+  if (!failed)
+  {
+    meshGroup.m_groupIndex = 0;
+    meshGroup.m_verticesCount = static_cast<uint32_t>(positions.size());
+    meshGroup.m_indexBuffer = std::move(indices);
+    meshGroup.m_indicesCount = static_cast<uint32_t>(meshGroup.m_indexBuffer.size());
+  }
+
+  return !failed;
+}
+
+bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
+                                    uint32_t heightmapWidth, uint32_t heightmapHeight,
+                                    uint32_t componentsMask, float minAltitude, float maxAltitude,
+                                    float width, float height, BaseMesh::MeshGroup & meshGroup)
+{
+  std::vector<double> coords;
+  std::vector<glm::vec3> positions;
+  std::vector<glm::vec2> uv;
+  coords.reserve(heightmapWidth * heightmapHeight * 2);
+  positions.reserve(heightmapWidth * heightmapHeight);
+  uv.reserve(heightmapWidth * heightmapHeight);
+  float const tileSizeX = width / heightmapWidth;
+  float const tileSizeY = height / heightmapHeight;
+  uint32_t const kTolerance = 3;
+  for (int i = 0; i < heightmapHeight; ++i)
+  {
+    auto const y = tileSizeY * (i - static_cast<int>(heightmapHeight) / 2);
+    for (int j = 0; j < heightmapWidth; ++j)
+    {
+      // Skip points around which the similar values.
+      if (i > 0 && j > 0 && i + 1 < heightmapHeight && j + 1 < heightmapWidth)
+      {
+        static std::vector<std::pair<uint32_t, uint32_t>> const kOffsets = {{-1, -1}, {0, -1}, {1, -1},
+                                                                            {-1, 0}, {1, 0},
+                                                                            {-1, 1}, {0, 1}, {1, 1}};
+        bool diff = false;
+        auto const val = heightmap[i * heightmapWidth + j];
+        for (auto const & [xoff, yoff] : kOffsets)
+        {
+          auto const valNeighbour = heightmap[(i + yoff) * heightmapWidth + (j + xoff)];
+          if (abs(val - valNeighbour) > kTolerance)
+          {
+            diff = true;
+            break;
+          }
+        }
+        if (!diff)
+          continue;
+      }
+
+      auto const x = tileSizeX * (j - static_cast<int>(heightmapWidth) / 2);
+      coords.emplace_back(static_cast<double>(x));
+      coords.emplace_back(static_cast<double>(y));
+
+      auto const z = glm::mix(minAltitude, maxAltitude,
+                           static_cast<float>(heightmap[i * heightmapWidth + j]) / 255.0f);
+      positions.emplace_back(x, z, y);
+
+      uv.emplace_back(static_cast<float>(j) / (heightmapWidth - 1),
+                         static_cast<float>(i) / (heightmapHeight - 1));
+    }
+  }
+  delaunator::Delaunator d(coords);
+
+  std::vector<uint32_t> indices(d.triangles.size());
+  std::vector<glm::vec3> normals(positions.size());
+  std::vector<glm::vec3> tangents(positions.size());
+  for (size_t i = 0; i < indices.size(); i += 3)
+  {
+    indices[i] = static_cast<uint32_t>(d.triangles[i]);
+    indices[i + 1] = static_cast<uint32_t>(d.triangles[i + 1]);
+    indices[i + 2] = static_cast<uint32_t>(d.triangles[i + 2]);
+    auto const v1 = glm::normalize(positions[indices[i + 1]] - positions[indices[i]]);
+    auto const v2 = glm::normalize(positions[indices[i + 2]] - positions[indices[i]]);
+    auto const n = glm::cross(v1, v2);
+    normals[indices[i]] += n;
+    normals[indices[i + 1]] += n;
+    normals[indices[i + 2]] += n;
+
+    auto const t = glm::normalize(glm::vec3(1.0f, v1.y, 0.0f));
+    tangents[indices[i]] += t;
+    tangents[indices[i + 1]] += t;
+    tangents[indices[i + 2]] += t;
+  }
+
+  for (size_t i = 0; i < normals.size(); ++i)
+  {
+    normals[i] = glm::normalize(normals[i]);
+    tangents[i] = glm::normalize(tangents[i]);
+  }
+
+  bool failed = false;
+  ForEachAttributeWithCheck(
+    componentsMask,
+    [&meshGroup, &failed, &positions, &uv, &normals, &tangents](MeshVertexAttribute attr) {
+      if (attr == MeshVertexAttribute::Position)
+      {
+        for (auto const & p : positions)
+          meshGroup.m_boundingBox.extend(p);
+
+        CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], positions);
+      }
+      else if (attr == MeshVertexAttribute::Normal)
+      {
+        CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], normals);
+      }
+      else if (attr == MeshVertexAttribute::Tangent)
+      {
+        CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], tangents);
+      }
+      else if (attr == MeshVertexAttribute::UV0)
+      {
+        CopyToVertexBuffer(meshGroup.m_vertexBuffers[attr], uv);
+      }
+      else
+      {
+        failed = true;
+        Logger::ToLog(Logger::Error,
+                      "Can't generate landscape, components mask contains unsupported attributes.");
+        return false;
+      }
+
+      return true;
+    });
 
   if (!failed)
   {

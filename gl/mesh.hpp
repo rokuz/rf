@@ -32,6 +32,10 @@ public:
   bool InitializeAsPlane(float width, float height, uint32_t widthSegments = 1,
                          uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
                          uint32_t attributesMask = Position | Normal | UV0 | Tangent);
+  bool InitializeAsTerrain(std::vector<uint8_t> const & heightmap,
+                           uint32_t heightmapWidth, uint32_t heightmapHeight,
+                           float minAltitude, float maxAltitude, float width, float height,
+                           uint32_t attributesMask = Position | Normal | UV0 | Tangent);
 
   void RenderGroup(int index, uint32_t instancesCount = 1) const;
 

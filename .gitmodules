@@ -19,3 +19,6 @@
 [submodule "3party/googletest"]
 	path = 3party/googletest
 	url = git@github.com:google/googletest
+[submodule "3party/delaunator-cpp"]
+	path = 3party/delaunator-cpp
+	url = https://github.com/delfrrr/delaunator-cpp.git

@@ -50,6 +50,7 @@ include_directories(3party/glfw/include)
 include_directories(3party/glm)
 include_directories(3party/glm-aabb)
 include_directories(3party/stb)
+include_directories(3party/delaunator-cpp)
 
 if (WIN32)
   include_directories(3party/gl3w)

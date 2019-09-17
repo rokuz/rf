@@ -124,6 +124,10 @@ protected:
   bool GeneratePlane(float width, float height, uint32_t widthSegments = 1,
                      uint32_t heightSegments = 1, uint32_t uSegments = 1, uint32_t vSegments = 1,
                      uint32_t attributesMask = Position | Normal | UV0 | Tangent);
+  bool GenerateTerrain(std::vector<uint8_t> const & heightmap,
+                       uint32_t heightmapWidth, uint32_t heightmapHeight,
+                       float minAltitude, float maxAltitude, float width, float height,
+                       uint32_t attributesMask = Position | Normal | UV0 | Tangent);
   void DestroyMesh();
 
   glm::mat4x4 FindBoneAnimation(uint32_t boneIndex, size_t animIndex, double animTime, bool & found);

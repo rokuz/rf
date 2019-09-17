@@ -46,6 +46,8 @@ public:
   void SetId(std::string const & id) { m_id = id; }
   std::string GetId() const { return m_id; }
 
+  std::vector<uint8_t> LoadHeightmap(std::string && fileName);
+
   static void SaveToPng(std::string && filename, uint32_t width, uint32_t height,
                         TextureFormat format, uint8_t const * data);
 
@@ -60,8 +62,6 @@ protected:
                                            std::string && backFileName);
 
   std::vector<uint8_t const *> LoadArray(std::vector<std::string> && filenames);
-
-  std::vector<uint8_t> LoadHeightmap(std::string && fileName);
 
   void FreeLoadedData(uint8_t const * imageData);
   int CalculateMipLevelsCount() const;
