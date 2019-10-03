@@ -14,9 +14,7 @@ enum class ShaderType : uint8_t
   Count
 };
 
-//class RenderTarget;
 class Texture;
-//class UniformBuffer;
 
 class GpuProgram
 {
@@ -48,16 +46,6 @@ public:
 
   bool ValidateProgram() const;
 
-//	void SetUniformBuffer(std::string const & uniform, UniformBuffer * buffer,
-//												int index);
-//
-//  void SetTexture(std::string const & uniform, RenderTarget * renderTarget,
-//                  int index, int slot);
-//  void SetDepth(std::string const & uniform, RenderTarget * renderTarget,
-//                int slot);
-//  void SetImage(std::string const & uniform, RenderTarget * renderTarget, int index,
-//								int slot, bool readFlag = true, bool writeFlag = true);
-
 private:
   GLuint m_program = 0;
   std::unordered_map<std::string, GLint> m_uniforms;
@@ -70,11 +58,5 @@ private:
   GLint GetUniformLocationInternal(std::string const & uniformName);
 
   bool BindUniform(std::string const & uniform);
-
-//  void SetTextureInternal(int uniformIndex, RenderTarget * renderTarget, int index,
-//                          int slot);
-//  void SetDepthInternal(int uniformIndex, RenderTarget * renderTarget, int slot);
-//  void SetImageInternal(int uniformIndex, RenderTarget * renderTarget,
-//                        int index, int slot, bool readFlag, bool writeFlag);
 };
 }  // namespace rf::gl

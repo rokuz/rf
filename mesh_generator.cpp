@@ -1,4 +1,5 @@
 #include "mesh_generator.hpp"
+#include "mesh_simplifier.hpp"
 
 #include "logger.hpp"
 
@@ -377,22 +378,56 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
   uv.reserve(heightmapWidth * heightmapHeight);
   float const tileSizeX = width / heightmapWidth;
   float const tileSizeY = height / heightmapHeight;
-  uint32_t const kTolerance = 3;
-  for (int i = 0; i < heightmapHeight; ++i)
+
+  auto isPivot = [heightmapHeight, heightmapWidth](int i, int j)
+  {
+    if (i == 0 && j == 0)
+      return true;
+    if (i == 0 && j + 1 == heightmapWidth)
+      return true;
+    if (i + 1 == heightmapHeight && j == 0)
+      return true;
+    if (i + 1 == heightmapHeight && j + 1 == heightmapWidth)
+      return true;
+
+    auto const di = heightmapHeight / 4;
+    auto const dj = heightmapWidth / 4;
+    if (i % di == 0 && j % dj == 0)
+      return true;
+
+    if (i % di == 0 && j + 1 == heightmapWidth)
+      return true;
+    if (i + 1 == heightmapHeight && j % dj == 0)
+      return true;
+
+    return false;
+  };
+
+  auto isValidOffset = [heightmapHeight, heightmapWidth](int i, int j, int xoff, int yoff)
+  {
+    i += yoff;
+    j += xoff;
+    return i >= 0 && j >= 0 && i < heightmapHeight && j < heightmapWidth;
+  };
+
+  uint32_t const kTolerance = 0;
+  for (int i = 0; i < static_cast<int>(heightmapHeight); ++i)
   {
     auto const y = tileSizeY * (i - static_cast<int>(heightmapHeight) / 2);
-    for (int j = 0; j < heightmapWidth; ++j)
+    for (int j = 0; j < static_cast<int>(heightmapWidth); ++j)
     {
       // Skip points around which the similar values.
-      if (i > 0 && j > 0 && i + 1 < heightmapHeight && j + 1 < heightmapWidth)
+      if (!isPivot(i, j))
       {
-        static std::vector<std::pair<uint32_t, uint32_t>> const kOffsets = {{-1, -1}, {0, -1}, {1, -1},
-                                                                            {-1, 0}, {1, 0},
-                                                                            {-1, 1}, {0, 1}, {1, 1}};
+        static std::vector<std::pair<int, int>> const kOffsets = {{-1, -1}, {0, -1}, {1, -1},
+                                                                  {-1, 0}, {1, 0},
+                                                                  {-1, 1}, {0, 1}, {1, 1}};
         bool diff = false;
         auto const val = heightmap[i * heightmapWidth + j];
         for (auto const & [xoff, yoff] : kOffsets)
         {
+          if (!isValidOffset(i, j, xoff, yoff))
+            continue;
           auto const valNeighbour = heightmap[(i + yoff) * heightmapWidth + (j + xoff)];
           if (abs(val - valNeighbour) > kTolerance)
           {
@@ -413,19 +448,25 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
       positions.emplace_back(x, z, y);
 
       uv.emplace_back(static_cast<float>(j) / (heightmapWidth - 1),
-                         static_cast<float>(i) / (heightmapHeight - 1));
+                      static_cast<float>(i) / (heightmapHeight - 1));
     }
   }
   delaunator::Delaunator d(coords);
 
-  std::vector<uint32_t> indices(d.triangles.size());
+  MeshSimplifier::MeshData simplifierData;
+  simplifierData.m_positions = positions;
+  simplifierData.m_indices.resize(d.triangles.size());
+  for (size_t i = 0; i < simplifierData.m_indices.size(); ++i)
+      simplifierData.m_indices[i] = static_cast<uint32_t>(d.triangles[i]);
+  MeshSimplifier simplifier(simplifierData);
+  auto result = simplifier.Simplify(50000, 5.0);
+  positions = std::move(result.m_positions);
+  std::vector<uint32_t> indices = std::move(result.m_indices);
+
   std::vector<glm::vec3> normals(positions.size());
   std::vector<glm::vec3> tangents(positions.size());
   for (size_t i = 0; i < indices.size(); i += 3)
   {
-    indices[i] = static_cast<uint32_t>(d.triangles[i]);
-    indices[i + 1] = static_cast<uint32_t>(d.triangles[i + 1]);
-    indices[i + 2] = static_cast<uint32_t>(d.triangles[i + 2]);
     auto const v1 = glm::normalize(positions[indices[i + 1]] - positions[indices[i]]);
     auto const v2 = glm::normalize(positions[indices[i + 2]] - positions[indices[i]]);
     auto const n = glm::cross(v1, v2);
@@ -433,7 +474,8 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
     normals[indices[i + 1]] += n;
     normals[indices[i + 2]] += n;
 
-    auto const t = glm::normalize(glm::vec3(1.0f, v1.y, 0.0f));
+    auto const b = glm::normalize(glm::vec3(0.0f, v1.y, 1.0f));
+    auto const t = glm::cross(n, b);
     tangents[indices[i]] += t;
     tangents[indices[i + 1]] += t;
     tangents[indices[i + 2]] += t;

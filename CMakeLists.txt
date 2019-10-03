@@ -80,6 +80,7 @@ set(SRC_LIST
   logger.hpp
   mesh_generator.cpp
   mesh_generator.hpp
+  mesh_simplifier.hpp
   rf.cpp
   rf.hpp
   window.cpp

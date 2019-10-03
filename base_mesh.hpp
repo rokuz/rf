@@ -96,6 +96,7 @@ public:
   void GetBonesTransforms(int groupIndex, size_t animIndex, double timeSinceStart, bool cycled,
                           std::vector<glm::mat4x4> & bonesTransforms);
   uint32_t GetAttributesMask() const { return m_attributesMask; }
+  uint32_t GetTrianglesCount() const { return m_indicesCount / 3; }
 
   struct MeshGroup
   {
