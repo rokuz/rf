@@ -46,6 +46,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_CTOR_INIT
 #include <glm/glm.hpp>
+#include <glm/common.hpp>
 #include <glm/gtx/compatibility.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>

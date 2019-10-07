@@ -410,6 +410,15 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
     return i >= 0 && j >= 0 && i < heightmapHeight && j < heightmapWidth;
   };
 
+  auto mergeNormals = [](glm::vec3 const & n1, glm::vec3 const & n2, glm::vec3 const & pos)
+  {
+    float constexpr kEps = 1e-7f;
+    float constexpr kThreshold = 0.9999f;
+    if (fabs(n1.y) >= kThreshold || fabs(n2.y) >= kThreshold || fabs(pos.y) < kEps)
+      return glm::vec3(0.0f, 1.0f, 0.0f);
+    return glm::normalize(n1 + n2);
+  };
+
   uint32_t const kTolerance = 0;
   for (int i = 0; i < static_cast<int>(heightmapHeight); ++i)
   {
@@ -470,12 +479,11 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
     auto const v1 = glm::normalize(positions[indices[i + 1]] - positions[indices[i]]);
     auto const v2 = glm::normalize(positions[indices[i + 2]] - positions[indices[i]]);
     auto const n = glm::cross(v1, v2);
-    normals[indices[i]] += n;
-    normals[indices[i + 1]] += n;
-    normals[indices[i + 2]] += n;
+    normals[indices[i]] = mergeNormals(n, normals[indices[i]], positions[indices[i]]);
+    normals[indices[i + 1]] = mergeNormals(n, normals[indices[i + 1]], positions[indices[i + 1]]);
+    normals[indices[i + 2]] = mergeNormals(n, normals[indices[i + 2]], positions[indices[i + 2]]);
 
-    auto const b = glm::normalize(glm::vec3(0.0f, v1.y, 1.0f));
-    auto const t = glm::cross(n, b);
+    auto const t = glm::cross(n, glm::vec3(0.0f, 0.0f, 1.0f));
     tangents[indices[i]] += t;
     tangents[indices[i + 1]] += t;
     tangents[indices[i + 2]] += t;

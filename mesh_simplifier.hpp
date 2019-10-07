@@ -310,7 +310,7 @@ private:
 
       auto const n = glm::cross(d1, d2);
       deleted[k] = false;
-      if (glm::dot(n, t.m_normal) < 0.01)
+      if (glm::dot(n, t.m_normal) < 0.05)
         return true;
     }
     return false;
