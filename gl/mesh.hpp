@@ -55,6 +55,7 @@ public:
   ~SinglePointMesh();
   void Initialize();
   void Render();
+  void RenderInstanced(uint32_t instancesCount);
 
 private:
   void Destroy();

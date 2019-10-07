@@ -241,6 +241,12 @@ void SinglePointMesh::Render()
   glDrawArrays(GL_POINTS, 0, 1);
 }
 
+void SinglePointMesh::RenderInstanced(uint32_t instancesCount)
+{
+  m_vertexArray->Bind();
+  glDrawArraysInstanced(GL_POINTS, 0, 1, instancesCount);
+}
+
 void SinglePointMesh::Destroy()
 {
   if (m_vertexBuffer != 0)
