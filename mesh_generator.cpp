@@ -203,6 +203,46 @@ void CopyToVertexBuffer(ByteArray & vb, std::vector<T> const & v)
   vb.resize(sz);
   memcpy(vb.data(), v.data(), sz);
 }
+
+bool IsPointInside(std::vector<glm::vec2> const & borders, glm::vec2 const & pt)
+{
+  if (borders.empty())
+    return true;
+
+  uint32_t rCross = 0;
+  uint32_t lCross = 0;
+  size_t const numPoints = borders.size();
+
+  auto prev = borders[numPoints - 1] - pt;
+  for (size_t i = 0; i < numPoints; ++i)
+  {
+    auto const cur = borders[i] - pt;
+    if (fabs(glm::length(cur)) < 1e-9)
+      return true;
+
+    bool const rCheck = ((cur.y > 0) != (prev.y > 0));
+    bool const lCheck = ((cur.y < 0) != (prev.y < 0));
+    if (rCheck || lCheck)
+    {
+      auto const delta = prev.y - cur.y;
+      auto const cp = cur.x * prev.y - cur.y * prev.x;
+      if (cp != 0.0)
+      {
+        bool const prevGreaterCur = delta > 0.0;
+        if (rCheck && ((cp > 0.0) == prevGreaterCur))
+          ++rCross;
+        if (lCheck && ((cp > 0.0) != prevGreaterCur))
+          ++lCross;
+      }
+    }
+    prev = cur;
+  }
+
+  if ((rCross & 1) != (lCross & 1))
+    return true;
+
+  return static_cast<bool>(rCross & 1);
+}
 }  // namespace
 
 bool MeshGenerator::GenerateSphere(float radius, uint32_t componentsMask,
@@ -370,12 +410,8 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
                                     uint32_t componentsMask, float minAltitude, float maxAltitude,
                                     float width, float height, BaseMesh::MeshGroup & meshGroup)
 {
-  std::vector<double> coords;
   std::vector<glm::vec3> positions;
-  std::vector<glm::vec2> uv;
-  coords.reserve(heightmapWidth * heightmapHeight * 2);
   positions.reserve(heightmapWidth * heightmapHeight);
-  uv.reserve(heightmapWidth * heightmapHeight);
   float const tileSizeX = width / heightmapWidth;
   float const tileSizeY = height / heightmapHeight;
 
@@ -410,15 +446,6 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
     return i >= 0 && j >= 0 && i < heightmapHeight && j < heightmapWidth;
   };
 
-  auto mergeNormals = [](glm::vec3 const & n1, glm::vec3 const & n2, glm::vec3 const & pos)
-  {
-    float constexpr kEps = 1e-7f;
-    float constexpr kThreshold = 0.9999f;
-    if (fabs(n1.y) >= kThreshold || fabs(n2.y) >= kThreshold || fabs(pos.y) < kEps)
-      return glm::vec3(0.0f, 1.0f, 0.0f);
-    return glm::normalize(n1 + n2);
-  };
-
   uint32_t const kTolerance = 0;
   for (int i = 0; i < static_cast<int>(heightmapHeight); ++i)
   {
@@ -449,28 +476,73 @@ bool MeshGenerator::GenerateTerrain(std::vector<uint8_t> const & heightmap,
       }
 
       auto const x = tileSizeX * (j - static_cast<int>(heightmapWidth) / 2);
-      coords.emplace_back(static_cast<double>(x));
-      coords.emplace_back(static_cast<double>(y));
-
       auto const z = glm::mix(minAltitude, maxAltitude,
                            static_cast<float>(heightmap[i * heightmapWidth + j]) / 255.0f);
       positions.emplace_back(x, z, y);
-
-      uv.emplace_back(static_cast<float>(j) / (heightmapWidth - 1),
-                      static_cast<float>(i) / (heightmapHeight - 1));
     }
+  }
+
+  return GenerateTerrain(positions, {}, componentsMask, meshGroup);
+}
+
+bool MeshGenerator::GenerateTerrain(std::vector<glm::vec3> const & inputPositions,
+                                    std::vector<glm::vec2> const & borders, uint32_t componentsMask,
+                                    BaseMesh::MeshGroup & meshGroup)
+{
+  auto mergeNormals = [](glm::vec3 const & n1, glm::vec3 const & n2, glm::vec3 const & pos)
+  {
+    float constexpr kEps = 1e-7f;
+    float constexpr kThreshold = 0.9999f;
+    if (fabs(n1.y) >= kThreshold || fabs(n2.y) >= kThreshold || fabs(pos.y) < kEps)
+      return glm::vec3(0.0f, 1.0f, 0.0f);
+    return glm::normalize(n1 + n2);
+  };
+
+  std::vector<double> coords;
+  coords.reserve(inputPositions.size() * 2);
+  for (auto const & p : inputPositions)
+  {
+    coords.emplace_back(static_cast<double>(p.x));
+    coords.emplace_back(static_cast<double>(p.z));
   }
   delaunator::Delaunator d(coords);
 
+  std::vector<uint32_t> initialIndices;
+  initialIndices.reserve(d.triangles.size());
+  for (size_t i = 0; i < d.triangles.size(); i += 3)
+  {
+    auto const p1 = glm::vec2(inputPositions[d.triangles[i]].x,
+                              inputPositions[d.triangles[i]].z);
+    auto const p2 = glm::vec2(inputPositions[d.triangles[i + 1]].x,
+                              inputPositions[d.triangles[i + 1]].z);
+    auto const p3 = glm::vec2(inputPositions[d.triangles[i + 2]].x,
+                              inputPositions[d.triangles[i + 2]].z);
+    auto const center = (p1 + p2 + p3) / 3.0f;
+    if (IsPointInside(borders, center))
+    {
+      initialIndices.push_back(d.triangles[i]);
+      initialIndices.push_back(d.triangles[i + 1]);
+      initialIndices.push_back(d.triangles[i + 2]);
+    }
+  }
+
   MeshSimplifier::MeshData simplifierData;
-  simplifierData.m_positions = positions;
-  simplifierData.m_indices.resize(d.triangles.size());
-  for (size_t i = 0; i < simplifierData.m_indices.size(); ++i)
-      simplifierData.m_indices[i] = static_cast<uint32_t>(d.triangles[i]);
+  simplifierData.m_positions = inputPositions;
+  simplifierData.m_indices = std::move(initialIndices);
   MeshSimplifier simplifier(simplifierData);
-  auto result = simplifier.Simplify(50000, 5.0);
-  positions = std::move(result.m_positions);
+  auto result = simplifier.Simplify(100000, 5.0);
+  auto positions = std::move(result.m_positions);
   std::vector<uint32_t> indices = std::move(result.m_indices);
+
+  std::vector<glm::vec2> uv;
+  uv.reserve(positions.size());
+  AABB box;
+  for (auto const & p : positions)
+    box.extend(p);
+  auto const w = box.getMax().x - box.getMin().x;
+  auto const h = box.getMax().z - box.getMin().z;
+  for (auto const & p : positions)
+    uv.emplace_back((p.x - box.getMin().x) / w, (p.z - box.getMin().z) / h);
 
   std::vector<glm::vec3> normals(positions.size());
   std::vector<glm::vec3> tangents(positions.size());

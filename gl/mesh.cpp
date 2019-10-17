@@ -183,6 +183,23 @@ bool Mesh::InitializeAsTerrain(std::vector<uint8_t> const & heightmap,
   return true;
 }
 
+bool Mesh::InitializeAsTerrain(std::vector<glm::vec3> const & positions,
+                               std::vector<glm::vec2> const & borders,
+                               uint32_t attributesMask)
+{
+  if (!GenerateTerrain(positions, borders, attributesMask))
+    return false;
+
+  InitBuffers();
+  if (glCheckError())
+  {
+    Destroy();
+    return false;
+  }
+
+  return true;
+}
+
 void Mesh::InitBuffers()
 {
   m_vertexArray = std::make_unique<VertexArray>();

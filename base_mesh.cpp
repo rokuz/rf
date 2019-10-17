@@ -788,6 +788,25 @@ bool BaseMesh::GenerateTerrain(std::vector<uint8_t> const & heightmap,
   return true;
 }
 
+bool BaseMesh::GenerateTerrain(std::vector<glm::vec3> const & positions,
+                               std::vector<glm::vec2> const & borders,
+                               uint32_t attributesMask)
+{
+  MeshGenerator generator;
+  BaseMesh::MeshGroup meshGroup;
+  if (!generator.GenerateTerrain(positions, borders, attributesMask, meshGroup))
+    return false;
+
+  m_rootNode = std::make_unique<MeshNode>();
+  m_attributesMask = attributesMask;
+  m_verticesCount = meshGroup.m_verticesCount;
+  m_indicesCount = meshGroup.m_indicesCount;
+  m_groupsCount = 1;
+  m_rootNode->m_groups.push_back(std::move(meshGroup));
+
+  return true;
+}
+
 void BaseMesh::DestroyMesh()
 {
   m_groupsCache.clear();

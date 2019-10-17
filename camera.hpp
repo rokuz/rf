@@ -50,6 +50,12 @@ public:
   float GetZFar() const { return m_zfar; }
   float GetAspectRatio() const { return m_aspect; }
 
+  void SetZFar(float zf)
+  {
+    m_zfar = zf;
+    UpdateProjection();
+  }
+
 protected:
 	void UpdateView();
 	void UpdateProjection();

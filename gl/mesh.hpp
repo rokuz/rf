@@ -36,6 +36,8 @@ public:
                            uint32_t heightmapWidth, uint32_t heightmapHeight,
                            float minAltitude, float maxAltitude, float width, float height,
                            uint32_t attributesMask = Position | Normal | UV0 | Tangent);
+  bool InitializeAsTerrain(std::vector<glm::vec3> const & positions, std::vector<glm::vec2> const & borders,
+                           uint32_t attributesMask = Position | Normal | UV0 | Tangent);
 
   void RenderGroup(int index, uint32_t instancesCount = 1) const;
 

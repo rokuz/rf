@@ -16,5 +16,8 @@ public:
                        uint32_t heightmapWidth, uint32_t heightmapHeight,
                        uint32_t componentsMask, float minAltitude, float maxAltitude,
                        float width, float height, BaseMesh::MeshGroup & meshGroup);
+  bool GenerateTerrain(std::vector<glm::vec3> const & inputPositions,
+                       std::vector<glm::vec2> const & borders, uint32_t componentsMask,
+                       BaseMesh::MeshGroup & meshGroup);
 };
 }  // namespace rf
