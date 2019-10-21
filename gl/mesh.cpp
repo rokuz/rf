@@ -200,6 +200,51 @@ bool Mesh::InitializeAsTerrain(std::vector<glm::vec3> const & positions,
   return true;
 }
 
+bool Mesh::InitializeWithPositions(std::vector<glm::vec3> const & positions, IndexBuffer32 const & indexBuffer)
+{
+  AABB aabb;
+  for (auto const & p : positions)
+    aabb.extend(p);
+
+  ByteArray array(positions.size() * sizeof(glm::vec3));
+  memcpy(array.data(), reinterpret_cast<float const *>(positions.data()), array.size());
+  VertexBufferCollection vertexBuffers;
+  vertexBuffers.emplace(MeshVertexAttribute::Position, std::move(array));
+  return InitializeWithBuffers(vertexBuffers, positions.size(), indexBuffer, aabb);
+}
+
+bool Mesh::InitializeWithBuffers(VertexBufferCollection const & vertexBuffers, uint32_t verticesCount,
+                                 IndexBuffer32 const & indexBuffer, AABB const & aabb)
+{
+  uint32_t attributesMask = 0;
+  for (auto const & v : vertexBuffers)
+    attributesMask |= v.first;
+
+  BaseMesh::MeshGroup meshGroup;
+  meshGroup.m_vertexBuffers = vertexBuffers;
+  meshGroup.m_indexBuffer = indexBuffer;
+  meshGroup.m_boundingBox = aabb;
+  meshGroup.m_groupIndex = 0;
+  meshGroup.m_verticesCount = verticesCount;
+  meshGroup.m_indicesCount = static_cast<uint32_t>(indexBuffer.size());
+
+  m_rootNode = std::make_unique<MeshNode>();
+  m_attributesMask = attributesMask;
+  m_verticesCount = meshGroup.m_verticesCount;
+  m_indicesCount = meshGroup.m_indicesCount;
+  m_groupsCount = 1;
+  m_rootNode->m_groups.push_back(std::move(meshGroup));
+
+  InitBuffers();
+  if (glCheckError())
+  {
+    Destroy();
+    return false;
+  }
+
+  return true;
+}
+
 void Mesh::InitBuffers()
 {
   m_vertexArray = std::make_unique<VertexArray>();

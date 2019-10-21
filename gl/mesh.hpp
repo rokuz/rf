@@ -38,6 +38,9 @@ public:
                            uint32_t attributesMask = Position | Normal | UV0 | Tangent);
   bool InitializeAsTerrain(std::vector<glm::vec3> const & positions, std::vector<glm::vec2> const & borders,
                            uint32_t attributesMask = Position | Normal | UV0 | Tangent);
+  bool InitializeWithPositions(std::vector<glm::vec3> const & postions, IndexBuffer32 const & indexBuffer);
+  bool InitializeWithBuffers(VertexBufferCollection const & vertexBuffers, uint32_t verticesCount,
+                             IndexBuffer32 const & indexBuffer, AABB const & aabb);
 
   void RenderGroup(int index, uint32_t instancesCount = 1) const;
 
