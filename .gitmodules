@@ -19,3 +19,6 @@
 [submodule "3party/delaunator-cpp"]
 	path = 3party/delaunator-cpp
 	url = https://github.com/delfrrr/delaunator-cpp.git
+[submodule "3party/glm-aabb"]
+	path = 3party/glm-aabb
+	url = https://github.com/rokuz/cpm-glm-aabb.git
