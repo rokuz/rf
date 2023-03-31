@@ -1,1 +1,1 @@
-# rf - Simple cross-platform rendering framework
+# rf - Simple cross-platform OpenGL rendering framework
