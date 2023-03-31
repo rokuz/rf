@@ -10,9 +10,6 @@
 [submodule "3party/glm"]
 	path = 3party/glm
 	url = git@github.com:g-truc/glm
-[submodule "3party/glm-aabb"]
-	path = 3party/glm-aabb
-	url = git@github.com:rokuz/glm-aabb
 [submodule "3party/cxxopts"]
 	path = 3party/cxxopts
 	url = git@github.com:jarro2783/cxxopts
