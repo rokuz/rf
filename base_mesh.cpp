@@ -429,7 +429,7 @@ glm::mat4x4 CalculateBoneAnimation(BoneAnimation const & boneAnim, double animTi
                                        glm::vec3(1.0f, 1.0f, 1.0f));
   glm::mat4x4 const scaleM = glm::scale(glm::mat4x4(), sc);
 
-  return scaleM * translationM * rotationM;
+  return translationM * rotationM * scaleM;
 }
 
 bool FindBonesInHierarchy(std::unique_ptr<BaseMesh::MeshNode> const & node,
